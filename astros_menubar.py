@@ -143,6 +143,56 @@ def setup_logging() -> None:
     )
 
 
+LAUNCH_AGENT_LABEL = "com.gyndok.astros-menubar"
+LAUNCH_AGENT_PATH = Path.home() / "Library" / "LaunchAgents" / f"{LAUNCH_AGENT_LABEL}.plist"
+
+
+def install_launch_agent() -> None:
+    """Auto-install LaunchAgent on first run so the app starts on login."""
+    if LAUNCH_AGENT_PATH.exists():
+        return
+    # Determine the executable — if running from a .app bundle, use the
+    # bundle's executable; otherwise use the script path directly.
+    import sys
+    executable = sys.executable
+    script = str(Path(__file__).resolve())
+
+    # If inside a .app bundle, the executable IS the app
+    if ".app/Contents" in executable:
+        program_args = f"<string>{executable}</string>"
+    else:
+        program_args = f"<string>{executable}</string>\n        <string>{script}</string>"
+
+    plist_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{LAUNCH_AGENT_LABEL}</string>
+    <key>ProgramArguments</key>
+    <array>
+        {program_args}
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>StandardOutPath</key>
+    <string>{CONFIG_DIR / "stdout.log"}</string>
+    <key>StandardErrorPath</key>
+    <string>{CONFIG_DIR / "stderr.log"}</string>
+</dict>
+</plist>
+"""
+    try:
+        LAUNCH_AGENT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        LAUNCH_AGENT_PATH.write_text(plist_content)
+        subprocess.run(["launchctl", "load", str(LAUNCH_AGENT_PATH)], check=False)
+        logging.info("LaunchAgent installed at %s", LAUNCH_AGENT_PATH)
+    except Exception as exc:
+        logging.exception("Failed to install LaunchAgent: %s", exc)
+
+
 def to_fahrenheit(celsius: float) -> float:
     return (celsius * 9.0 / 5.0) + 32.0
 
@@ -1576,6 +1626,7 @@ class AstrosMenuBarApp(rumps.App):
 
 if __name__ == "__main__":
     setup_logging()
+    install_launch_agent()
     try:
         app = AstrosMenuBarApp()
         app.run()
