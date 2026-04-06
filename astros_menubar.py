@@ -150,6 +150,417 @@ def now_local() -> dt.datetime:
     return dt.datetime.now()
 
 
+# ---------------------------------------------------------------------------
+# Task 2: Cache and MLB API functions
+# ---------------------------------------------------------------------------
+
+def read_cache(name: str) -> dict:
+    path = CACHE_DIR / f"{name}.json"
+    if not path.exists():
+        return {}
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as exc:
+        logging.exception("Failed reading cache %s: %s", name, exc)
+        return {}
+
+
+def write_cache(name: str, payload: dict) -> None:
+    ensure_paths()
+    path = CACHE_DIR / f"{name}.json"
+    try:
+        with path.open("w", encoding="utf-8") as f:
+            json.dump(payload, f)
+    except Exception as exc:
+        logging.exception("Failed writing cache %s: %s", name, exc)
+
+
+def fetch_schedule(start_date: str, end_date: str) -> list:
+    """Fetch Astros games in date range with probable pitchers and broadcasts."""
+    try:
+        url = (
+            f"{MLB_API_BASE}/schedule?sportId=1&teamId={ASTROS_TEAM_ID}"
+            f"&startDate={start_date}&endDate={end_date}"
+            f"&hydrate=probablePitcher,broadcasts"
+        )
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        games = []
+        for date_entry in data.get("dates", []):
+            for game in date_entry.get("games", []):
+                games.append(game)
+        return games
+    except Exception as exc:
+        logging.exception("fetch_schedule failed: %s", exc)
+        return []
+
+
+def fetch_live_game(game_pk: int) -> dict:
+    """Fetch live game feed for score, inning, count, runners, matchup."""
+    try:
+        url = f"{MLB_API_BASE.replace('/v1', '/v1.1')}/game/{game_pk}/feed/live"
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as exc:
+        logging.exception("fetch_live_game failed: %s", exc)
+        return {}
+
+
+def fetch_boxscore(game_pk: int) -> dict:
+    """Fetch boxscore for batting order / lineup."""
+    try:
+        url = f"{MLB_API_BASE}/game/{game_pk}/boxscore"
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as exc:
+        logging.exception("fetch_boxscore failed: %s", exc)
+        return {}
+
+
+def parse_lineup(boxscore: dict, team_id: int) -> list:
+    """Extract batting order from boxscore for the given team."""
+    for side in ("away", "home"):
+        team_data = boxscore.get("teams", {}).get(side, {})
+        if team_data.get("team", {}).get("id") == team_id:
+            batting_order = team_data.get("battingOrder", [])
+            players = team_data.get("players", {})
+            lineup = []
+            for pid in batting_order:
+                key = f"ID{pid}"
+                p = players.get(key, {})
+                person = p.get("person", {})
+                pos = p.get("position", {})
+                lineup.append({
+                    "name": person.get("fullName", "Unknown"),
+                    "position": pos.get("abbreviation", "?"),
+                })
+            return lineup
+    return []
+
+
+def fetch_standings() -> list:
+    """Fetch all MLB division standings."""
+    try:
+        url = f"{MLB_API_BASE}/standings?leagueId=103,104&season={now_local().year}&standingsTypes=regularSeason"
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        return resp.json().get("records", [])
+    except Exception as exc:
+        logging.exception("fetch_standings failed: %s", exc)
+        return []
+
+
+def fetch_team_stats() -> dict:
+    """Fetch Astros team hitting and pitching stats for current season."""
+    result = {}
+    try:
+        year = now_local().year
+        url = f"{MLB_API_BASE}/teams/{ASTROS_TEAM_ID}/stats?stats=season&group=hitting&season={year}"
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        hitting_stats = resp.json().get("stats", [])
+        if hitting_stats:
+            splits = hitting_stats[0].get("splits", [])
+            if splits:
+                result["hitting"] = splits[0].get("stat", {})
+
+        url = f"{MLB_API_BASE}/teams/{ASTROS_TEAM_ID}/stats?stats=season&group=pitching&season={year}"
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        pitching_stats = resp.json().get("stats", [])
+        if pitching_stats:
+            splits = pitching_stats[0].get("splits", [])
+            if splits:
+                result["pitching"] = splits[0].get("stat", {})
+    except Exception as exc:
+        logging.exception("fetch_team_stats failed: %s", exc)
+    return result
+
+
+def fetch_pitcher_stats(player_id: int) -> dict:
+    """Fetch season stats for a specific pitcher."""
+    try:
+        year = now_local().year
+        url = f"{MLB_API_BASE}/people/{player_id}/stats?stats=season&group=pitching&season={year}"
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        stats = resp.json().get("stats", [])
+        if stats:
+            splits = stats[0].get("splits", [])
+            if splits:
+                return splits[0].get("stat", {})
+    except Exception as exc:
+        logging.exception("fetch_pitcher_stats failed: %s", exc)
+    return {}
+
+
+# ---------------------------------------------------------------------------
+# Task 3: Odds and Weather functions
+# ---------------------------------------------------------------------------
+
+def fetch_odds(api_key: str) -> dict:
+    """Fetch Astros game odds from The Odds API."""
+    if not api_key:
+        return {}
+    try:
+        url = (
+            f"{ODDS_API_BASE}/odds/"
+            f"?apiKey={api_key}&regions=us&markets=h2h,spreads,totals"
+            f"&oddsFormat=american&bookmakers=draftkings"
+        )
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        events = resp.json()
+        for event in events:
+            if "Houston Astros" in (event.get("home_team", ""), event.get("away_team", "")):
+                return event
+        return {}
+    except Exception as exc:
+        logging.exception("fetch_odds failed: %s", exc)
+        return {}
+
+
+def parse_odds(event: dict) -> dict:
+    """Parse odds event into a clean dict with moneyline, spread, total."""
+    result = {"matchup": "", "moneyline": {}, "spread": {}, "total": {}, "updated": ""}
+    if not event:
+        return result
+
+    home = event.get("home_team", "")
+    away = event.get("away_team", "")
+    result["matchup"] = f"{away} @ {home}"
+    result["updated"] = event.get("commence_time", "")
+
+    for bookmaker in event.get("bookmakers", []):
+        for market in bookmaker.get("markets", []):
+            key = market.get("key")
+            outcomes = market.get("outcomes", [])
+            if key == "h2h":
+                for o in outcomes:
+                    side = "home" if o["name"] == home else "away"
+                    result["moneyline"][side] = {"name": o["name"], "price": o["price"]}
+            elif key == "spreads":
+                for o in outcomes:
+                    side = "home" if o["name"] == home else "away"
+                    result["spread"][side] = {"name": o["name"], "price": o["price"], "point": o.get("point", 0)}
+            elif key == "totals":
+                for o in outcomes:
+                    direction = o["name"].lower()
+                    result["total"][direction] = {"price": o["price"], "point": o.get("point", 0)}
+        break
+    return result
+
+
+def fetch_weather(team_id: int) -> dict:
+    """Fetch current weather at the given team's ballpark."""
+    coords = BALLPARK_COORDS.get(team_id)
+    if not coords:
+        return {}
+    lat, lon = coords
+    try:
+        url = (
+            f"{WEATHER_API_BASE}"
+            f"?latitude={lat}&longitude={lon}&current_weather=true"
+            f"&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
+        )
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        cw = data.get("current_weather", {})
+        daily = data.get("daily", {})
+        return {
+            "temp_c": float(cw.get("temperature", 0)),
+            "temp_f": to_fahrenheit(float(cw.get("temperature", 0))),
+            "code": int(cw.get("weathercode", 0)),
+            "wind_kmh": float(cw.get("windspeed", 0)),
+            "wind_mph": float(cw.get("windspeed", 0)) * 0.621371,
+            "max_c": float(daily.get("temperature_2m_max", [0])[0]),
+            "min_c": float(daily.get("temperature_2m_min", [0])[0]),
+            "max_f": to_fahrenheit(float(daily.get("temperature_2m_max", [0])[0])),
+            "min_f": to_fahrenheit(float(daily.get("temperature_2m_min", [0])[0])),
+            "condition": WEATHER_CODES.get(int(cw.get("weathercode", 0)), "Unknown"),
+            "updated": now_local().isoformat(timespec="minutes"),
+        }
+    except Exception as exc:
+        logging.exception("fetch_weather failed: %s", exc)
+        return {}
+
+
+# ---------------------------------------------------------------------------
+# Task 4: Game state detection and display helpers
+# ---------------------------------------------------------------------------
+
+def detect_game_state(games: list) -> dict:
+    """Determine current game state from today's schedule."""
+    today = now_local().strftime("%Y-%m-%d")
+    todays_games = [g for g in games if g.get("officialDate") == today]
+
+    if not todays_games:
+        return {"state": "off", "game": None, "game_pk": None}
+
+    game = todays_games[0]
+    status = game.get("status", {})
+    abstract = status.get("abstractGameState", "")
+    detailed = status.get("detailedState", "")
+
+    if abstract == "Live" or detailed == "In Progress":
+        return {"state": "live", "game": game, "game_pk": game["gamePk"]}
+    elif abstract == "Final" or detailed == "Final":
+        return {"state": "final", "game": game, "game_pk": game["gamePk"]}
+    else:
+        return {"state": "pre", "game": game, "game_pk": game["gamePk"]}
+
+
+def get_astros_side(game: dict) -> str:
+    """Return 'away' or 'home' based on which side the Astros are."""
+    if game["teams"]["away"]["team"]["id"] == ASTROS_TEAM_ID:
+        return "away"
+    return "home"
+
+
+def opponent_team_id(game: dict) -> int:
+    """Return the opponent's team ID."""
+    side = get_astros_side(game)
+    opp_side = "home" if side == "away" else "away"
+    return game["teams"][opp_side]["team"]["id"]
+
+
+def format_game_time(game: dict) -> str:
+    """Format game start time in local time."""
+    game_date_str = game.get("gameDate", "")
+    if not game_date_str:
+        return "TBD"
+    try:
+        utc_dt = dt.datetime.fromisoformat(game_date_str.replace("Z", "+00:00"))
+        local_dt = utc_dt.astimezone()
+        return local_dt.strftime("%-I:%M %p")
+    except Exception:
+        return "TBD"
+
+
+def format_record(game: dict, side: str) -> str:
+    """Format W-L record from game's leagueRecord."""
+    rec = game["teams"][side].get("leagueRecord", {})
+    return f"{rec.get('wins', 0)}-{rec.get('losses', 0)}"
+
+
+def get_tv_broadcast(game: dict) -> str:
+    """Get the TV broadcast name, preferring Astros home network."""
+    broadcasts = game.get("broadcasts", [])
+    for b in broadcasts:
+        if b.get("type") == "TV" and "Space City" in b.get("name", ""):
+            return b["name"]
+    for b in broadcasts:
+        if b.get("type") == "TV":
+            return b.get("name", "")
+    return "TBD"
+
+
+def get_probable_pitcher(game: dict, side: str) -> dict:
+    """Get probable pitcher info for a side ('away' or 'home')."""
+    pp = game.get("teams", {}).get(side, {}).get("probablePitcher", {})
+    return {
+        "name": pp.get("fullName", "TBD"),
+        "id": pp.get("id"),
+    }
+
+
+def parse_live_data(feed: dict) -> dict:
+    """Parse live game feed into display-ready data."""
+    linescore = feed.get("liveData", {}).get("linescore", {})
+    plays = feed.get("liveData", {}).get("plays", {})
+    current_play = plays.get("currentPlay", {})
+
+    teams_score = linescore.get("teams", {})
+    away_runs = teams_score.get("away", {}).get("runs", 0)
+    home_runs = teams_score.get("home", {}).get("runs", 0)
+
+    inning = linescore.get("currentInning", 0)
+    inning_ordinal = linescore.get("currentInningOrdinal", "")
+    is_top = linescore.get("isTopInning", True)
+    half = "Top" if is_top else "Bot"
+
+    count = current_play.get("count", {})
+    matchup = current_play.get("matchup", {})
+    pitcher = matchup.get("pitcher", {}).get("fullName", "")
+    batter = matchup.get("batter", {}).get("fullName", "")
+
+    offense = linescore.get("offense", {})
+    runners = []
+    if offense.get("first"):
+        runners.append("1st")
+    if offense.get("second"):
+        runners.append("2nd")
+    if offense.get("third"):
+        runners.append("3rd")
+
+    game_data = feed.get("gameData", {})
+    away_team = game_data.get("teams", {}).get("away", {}).get("abbreviation", "")
+    home_team = game_data.get("teams", {}).get("home", {}).get("abbreviation", "")
+
+    return {
+        "away_abbr": away_team,
+        "home_abbr": home_team,
+        "away_runs": away_runs or 0,
+        "home_runs": home_runs or 0,
+        "inning": inning,
+        "inning_ordinal": inning_ordinal,
+        "half": half,
+        "balls": count.get("balls", 0),
+        "strikes": count.get("strikes", 0),
+        "outs": count.get("outs", 0),
+        "pitcher": pitcher,
+        "batter": batter,
+        "runners": runners,
+    }
+
+
+def format_odds_price(price: int) -> str:
+    """Format American odds with +/- prefix."""
+    if price >= 0:
+        return f"+{price}"
+    return str(price)
+
+
 if __name__ == "__main__":
     setup_logging()
-    print("Astros Menu Bar skeleton loaded.")
+    today = now_local().strftime("%Y-%m-%d")
+    end = (now_local() + dt.timedelta(days=7)).strftime("%Y-%m-%d")
+
+    print("=== Schedule ===")
+    games = fetch_schedule(today, end)
+    for g in games[:3]:
+        away = g["teams"]["away"]["team"]["name"]
+        home = g["teams"]["home"]["team"]["name"]
+        print(f"  {g['officialDate']}: {away} @ {home} - {format_game_time(g)} - TV: {get_tv_broadcast(g)}")
+
+    print("\n=== Game State ===")
+    state_info = detect_game_state(games)
+    print(f"  State: {state_info['state']}")
+    if state_info["game"]:
+        side = get_astros_side(state_info["game"])
+        print(f"  Astros are: {side}")
+        print(f"  Record: {format_record(state_info['game'], side)}")
+
+    print("\n=== Standings ===")
+    records = fetch_standings()
+    for rec in records[:2]:
+        div_id = rec.get("division", {}).get("id")
+        teams = [(tr["team"]["name"], tr["leagueRecord"]["wins"], tr["leagueRecord"]["losses"]) for tr in rec.get("teamRecords", [])[:3]]
+        print(f"  Div {div_id}: {teams}")
+
+    print("\n=== Team Stats ===")
+    stats = fetch_team_stats()
+    h = stats.get("hitting", {})
+    p = stats.get("pitching", {})
+    print(f"  AVG: {h.get('avg')}  HR: {h.get('homeRuns')}  ERA: {p.get('era')}")
+
+    print("\n=== Weather (Minute Maid Park) ===")
+    w = fetch_weather(ASTROS_TEAM_ID)
+    print(f"  {w.get('temp_f', 0):.0f}°F, {w.get('condition', 'Unknown')}, Wind: {w.get('wind_mph', 0):.0f} mph")
+
+    print("\nAll API functions verified.")
