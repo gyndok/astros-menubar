@@ -566,20 +566,20 @@ class AstrosMenuBarApp(rumps.App):
     def _build_menu(self) -> None:
         """Create all menu items."""
         # Top context-aware lines
-        self.top_line_1 = rumps.MenuItem("—")
-        self.top_line_2 = rumps.MenuItem("—")
-        self.top_line_3 = rumps.MenuItem("—")
-        self.top_line_4 = rumps.MenuItem("—")
-        self.top_line_5 = rumps.MenuItem("—")
+        self.top_line_1 = rumps.MenuItem("—", callback=self._noop)
+        self.top_line_2 = rumps.MenuItem("—", callback=self._noop)
+        self.top_line_3 = rumps.MenuItem("—", callback=self._noop)
+        self.top_line_4 = rumps.MenuItem("—", callback=self._noop)
+        self.top_line_5 = rumps.MenuItem("—", callback=self._noop)
 
         # Today's Game submenu
         self.todays_game_menu = rumps.MenuItem("⚾ Today's Game")
-        self.tg_line_1 = rumps.MenuItem("—")
-        self.tg_line_2 = rumps.MenuItem("—")
-        self.tg_line_3 = rumps.MenuItem("—")
-        self.tg_line_4 = rumps.MenuItem("—")
-        self.tg_line_5 = rumps.MenuItem("—")
-        self.tg_line_6 = rumps.MenuItem("—")
+        self.tg_line_1 = rumps.MenuItem("—", callback=self._noop)
+        self.tg_line_2 = rumps.MenuItem("—", callback=self._noop)
+        self.tg_line_3 = rumps.MenuItem("—", callback=self._noop)
+        self.tg_line_4 = rumps.MenuItem("—", callback=self._noop)
+        self.tg_line_5 = rumps.MenuItem("—", callback=self._noop)
+        self.tg_line_6 = rumps.MenuItem("—", callback=self._noop)
         self.todays_game_menu.update([
             self.tg_line_1, self.tg_line_2, self.tg_line_3,
             self.tg_line_4, self.tg_line_5, self.tg_line_6,
@@ -723,8 +723,18 @@ class AstrosMenuBarApp(rumps.App):
         """Quit the application."""
         rumps.quit_application()
 
+    @staticmethod
+    def _noop(_sender: Any) -> None:
+        """No-op callback so menu items render as enabled (not greyed out)."""
+        pass
+
+    def _item(self, title: str) -> rumps.MenuItem:
+        """Create an info-only menu item that appears enabled."""
+        return rumps.MenuItem(title, callback=self._noop)
+
     def manual_refresh(self, _sender: Any) -> None:
-        """Trigger a full refresh."""
+        """Trigger a full refresh, reloading config from disk."""
+        self.config = load_config()
         self.refresh_all(None)
 
     def send_notification(self, title: str, message: str) -> None:
@@ -985,8 +995,8 @@ class AstrosMenuBarApp(rumps.App):
             sp_opp = get_probable_pitcher(game, opp_side)
             tv = get_tv_broadcast(game)
             game_item.update([
-                rumps.MenuItem(f"SP: {sp_astros['name']} vs {sp_opp['name']}"),
-                rumps.MenuItem(f"TV: {tv}"),
+                rumps.MenuItem(f"SP: {sp_astros['name']} vs {sp_opp['name']}", callback=AstrosMenuBarApp._noop),
+                rumps.MenuItem(f"TV: {tv}", callback=AstrosMenuBarApp._noop),
             ])
             self.schedule_menu.update([game_item])
 
@@ -998,11 +1008,11 @@ class AstrosMenuBarApp(rumps.App):
         """Show batting order 1-9 or a placeholder."""
         self.lineup_menu.clear()
         if not self.lineup_data:
-            self.lineup_menu.update([rumps.MenuItem("Lineup not yet announced")])
+            self.lineup_menu.update([rumps.MenuItem("Lineup not yet announced", callback=AstrosMenuBarApp._noop)])
             return
         for i, player in enumerate(self.lineup_data, start=1):
             self.lineup_menu.update([
-                rumps.MenuItem(f"{i}. {player['name']} ({player['position']})")
+                rumps.MenuItem(f"{i}. {player['name']} ({player['position']})", callback=AstrosMenuBarApp._noop)
             ])
 
     def update_rotation_menu(self) -> None:
@@ -1026,7 +1036,7 @@ class AstrosMenuBarApp(rumps.App):
 
         self.rotation_menu.clear()
         if not pitchers:
-            self.rotation_menu.update([rumps.MenuItem("No rotation data available")])
+            self.rotation_menu.update([rumps.MenuItem("No rotation data available", callback=AstrosMenuBarApp._noop)])
             return
 
         for p in pitchers[:6]:
@@ -1035,13 +1045,13 @@ class AstrosMenuBarApp(rumps.App):
             losses = stats.get("losses", 0)
             era = stats.get("era", "—")
             label = f"{p['name']} — Next: {p['date']} ({wins}-{losses}, {era} ERA)"
-            self.rotation_menu.update([rumps.MenuItem(label)])
+            self.rotation_menu.update([rumps.MenuItem(label, callback=AstrosMenuBarApp._noop)])
 
     def update_standings_menu(self) -> None:
         """Full drill-down standings: MLB > League > Division."""
         self.standings_menu.clear()
         if not self.standings_data:
-            self.standings_menu.update([rumps.MenuItem("Standings unavailable")])
+            self.standings_menu.update([rumps.MenuItem("Standings unavailable", callback=AstrosMenuBarApp._noop)])
             return
 
         # Build division-id → records lookup
@@ -1075,7 +1085,7 @@ class AstrosMenuBarApp(rumps.App):
                     gb = tr.get("gamesBack", "—")
                     streak = tr.get("streak", {}).get("streakCode", "—")
                     row = f"{tname}  {wins}-{losses}  {pct}  GB: {gb}  {streak}"
-                    div_item.update([rumps.MenuItem(row)])
+                    div_item.update([rumps.MenuItem(row, callback=AstrosMenuBarApp._noop)])
                     # Collect non-division leaders for wild card
                     if tr.get("divisionRank", "1") != "1":
                         wc_teams.append(tr)
@@ -1094,7 +1104,7 @@ class AstrosMenuBarApp(rumps.App):
                 wins = rec.get("wins", 0)
                 losses = rec.get("losses", 0)
                 wcgb = tr.get("wildCardGamesBack", "—")
-                wc_item.update([rumps.MenuItem(f"{tname}  {wins}-{losses}  WC GB: {wcgb}")])
+                wc_item.update([rumps.MenuItem(f"{tname}  {wins}-{losses}  WC GB: {wcgb}", callback=AstrosMenuBarApp._noop)])
             league_item.update([wc_item])
 
             self.standings_menu.update([league_item])
@@ -1104,10 +1114,10 @@ class AstrosMenuBarApp(rumps.App):
         self.odds_menu.clear()
         api_key = self.config.get("odds_api_key", "")
         if not api_key:
-            self.odds_menu.update([rumps.MenuItem("No API key — add odds_api_key to config")])
+            self.odds_menu.update([rumps.MenuItem("No API key — add odds_api_key to config", callback=AstrosMenuBarApp._noop)])
             return
         if not self.odds_data:
-            self.odds_menu.update([rumps.MenuItem("No odds available")])
+            self.odds_menu.update([rumps.MenuItem("No odds available", callback=AstrosMenuBarApp._noop)])
             return
         parsed = parse_odds(self.odds_data)
         matchup = parsed.get("matchup", "")
@@ -1124,19 +1134,21 @@ class AstrosMenuBarApp(rumps.App):
         under_d = total.get("under", {})
 
         self.odds_menu.update([
-            rumps.MenuItem(f"Game: {matchup}"),
+            rumps.MenuItem(f"Game: {matchup}", callback=AstrosMenuBarApp._noop),
             None,
-            rumps.MenuItem(f"Moneyline — Away: {away_ml}  Home: {home_ml}"),
+            rumps.MenuItem(f"Moneyline — Away: {away_ml}  Home: {home_ml}", callback=AstrosMenuBarApp._noop),
             rumps.MenuItem(
                 f"Run Line — Away: {away_sp.get('point', '—')} ({format_odds_price(away_sp.get('price', 0)) if away_sp else '—'})"
-                f"  Home: {home_sp.get('point', '—')} ({format_odds_price(home_sp.get('price', 0)) if home_sp else '—'})"
+                f"  Home: {home_sp.get('point', '—')} ({format_odds_price(home_sp.get('price', 0)) if home_sp else '—'})",
+                callback=AstrosMenuBarApp._noop,
             ),
             rumps.MenuItem(
                 f"O/U: {over_d.get('point', '—')}  Over {format_odds_price(over_d.get('price', 0)) if over_d else '—'}"
-                f"  Under {format_odds_price(under_d.get('price', 0)) if under_d else '—'}"
+                f"  Under {format_odds_price(under_d.get('price', 0)) if under_d else '—'}",
+                callback=AstrosMenuBarApp._noop,
             ),
             None,
-            rumps.MenuItem(f"Updated: {updated}"),
+            rumps.MenuItem(f"Updated: {updated}", callback=AstrosMenuBarApp._noop),
         ])
 
     def update_weather_menu(self) -> None:
@@ -1144,7 +1156,7 @@ class AstrosMenuBarApp(rumps.App):
         self.weather_menu.clear()
         w = self.weather_data
         if not w:
-            self.weather_menu.update([rumps.MenuItem("Weather unavailable")])
+            self.weather_menu.update([rumps.MenuItem("Weather unavailable", callback=AstrosMenuBarApp._noop)])
             return
         temp_f = w.get("temp_f", 0)
         temp_c = w.get("temp_c", 0)
@@ -1170,12 +1182,12 @@ class AstrosMenuBarApp(rumps.App):
         venue_names = {v: k for k, v in BALLPARK_COORDS.items()}
 
         self.weather_menu.update([
-            rumps.MenuItem(f"Temp: {temp_f:.0f}°F / {temp_c:.0f}°C"),
-            rumps.MenuItem(f"Condition: {condition}"),
-            rumps.MenuItem(f"H/L: {max_f:.0f}°F / {min_f:.0f}°F  ({max_c:.0f}°C / {min_c:.0f}°C)"),
-            rumps.MenuItem(f"Wind: {wind_mph:.0f} mph ({wind_kmh:.0f} km/h)"),
+            rumps.MenuItem(f"Temp: {temp_f:.0f}°F / {temp_c:.0f}°C", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"Condition: {condition}", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"H/L: {max_f:.0f}°F / {min_f:.0f}°F  ({max_c:.0f}°C / {min_c:.0f}°C)", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"Wind: {wind_mph:.0f} mph ({wind_kmh:.0f} km/h)", callback=AstrosMenuBarApp._noop),
             None,
-            rumps.MenuItem(f"Updated: {updated}"),
+            rumps.MenuItem(f"Updated: {updated}", callback=AstrosMenuBarApp._noop),
         ])
 
     def update_stats_menu(self) -> None:
@@ -1184,7 +1196,7 @@ class AstrosMenuBarApp(rumps.App):
         h = self.team_stats.get("hitting", {})
         p = self.team_stats.get("pitching", {})
         if not h and not p:
-            self.stats_menu.update([rumps.MenuItem("Stats unavailable")])
+            self.stats_menu.update([rumps.MenuItem("Stats unavailable", callback=AstrosMenuBarApp._noop)])
             return
 
         record = f"{h.get('wins', '—')}-{h.get('losses', '—')}"
@@ -1195,12 +1207,12 @@ class AstrosMenuBarApp(rumps.App):
         era = p.get("era", "—")
 
         self.stats_menu.update([
-            rumps.MenuItem(f"Record: {record}"),
-            rumps.MenuItem(f"Batting Avg: {avg}"),
-            rumps.MenuItem(f"Home Runs: {hr}"),
-            rumps.MenuItem(f"Runs Scored: {runs}"),
-            rumps.MenuItem(f"OPS: {ops}"),
-            rumps.MenuItem(f"Team ERA: {era}"),
+            rumps.MenuItem(f"Record: {record}", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"Batting Avg: {avg}", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"Home Runs: {hr}", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"Runs Scored: {runs}", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"OPS: {ops}", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"Team ERA: {era}", callback=AstrosMenuBarApp._noop),
         ])
 
     # ------------------------------------------------------------------
