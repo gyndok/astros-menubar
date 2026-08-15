@@ -9,8 +9,8 @@ OPTIONS = {
         "CFBundleName": "Astros Menu Bar",
         "CFBundleDisplayName": "Astros Menu Bar",
         "CFBundleIdentifier": "com.gyndok.astros-menubar",
-        "CFBundleVersion": "1.0.0",
-        "CFBundleShortVersionString": "1.0.0",
+        "CFBundleVersion": "1.1.0",
+        "CFBundleShortVersionString": "1.1.0",
     },
     "packages": ["rumps", "requests", "yaml", "certifi"],
     "includes": [
