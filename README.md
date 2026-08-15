@@ -4,6 +4,10 @@ Follow the Houston Astros all season from your macOS menu bar. Live scores,
 schedule, lineups, standings, magic numbers, Vegas odds, ballpark weather,
 and a league-wide scoreboard — one click away, all day.
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="Astros Menu Bar on game day" width="420">
+</p>
+
 The menu bar icon tells you the game state at a glance:
 
 | Icon | Meaning |
