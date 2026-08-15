@@ -848,6 +848,7 @@ class AstrosMenuBarApp(rumps.App):
         self._did_initial_refresh: bool = False
         self._starting_soon_pk: Optional[int] = None  # dedup "starting soon" notification
         self._score_watch_pk: Optional[int] = None    # reset score tracking per game
+        self._lineup_seen_pk: Optional[int] = None    # dedup "lineup posted" notification
         self.pitcher_stats_cache: Dict[int, dict] = {}
 
         # Load cached data from disk
@@ -1657,15 +1658,14 @@ class AstrosMenuBarApp(rumps.App):
             if state == "live" and game_pk:
                 feed = fetch_live_game(game_pk)
                 self.live_data = parse_live_data(feed)
+            if game_pk:
+                # Full refresh loads the lineup silently (no notification) —
+                # a lineup that's already up when the app starts isn't news.
                 boxscore = fetch_boxscore(game_pk)
                 new_lineup = parse_lineup(boxscore, ASTROS_TEAM_ID)
                 if new_lineup:
                     self.lineup_data = new_lineup
-            elif state in ("final", "pre") and game_pk:
-                boxscore = fetch_boxscore(game_pk)
-                new_lineup = parse_lineup(boxscore, ASTROS_TEAM_ID)
-                if new_lineup:
-                    self.lineup_data = new_lineup
+                    self._lineup_seen_pk = game_pk
                     write_cache("lineup", {"lineup": self.lineup_data})
 
             self.standings_data = fetch_standings()
@@ -1694,6 +1694,20 @@ class AstrosMenuBarApp(rumps.App):
             logging.exception("refresh_all error: %s", exc)
         finally:
             self._update_all_menus()
+
+    def _check_lineup(self, game_pk: int) -> None:
+        """Fetch the lineup; notify the first time it appears for this game."""
+        boxscore = fetch_boxscore(game_pk)
+        new_lineup = parse_lineup(boxscore, ASTROS_TEAM_ID)
+        if not new_lineup:
+            return
+        self.lineup_data = new_lineup
+        write_cache("lineup", {"lineup": self.lineup_data})
+        if self._lineup_seen_pk != game_pk:
+            self._lineup_seen_pk = game_pk
+            notifs = self.config.get("notifications", {})
+            if notifs.get("lineup_posted", False):
+                self.send_notification("Lineup Posted", "Astros lineup has been announced!")
 
     def _set_interval(self, seconds: int) -> None:
         """Adjust the primary timer interval if it changed."""
@@ -1796,6 +1810,10 @@ class AstrosMenuBarApp(rumps.App):
                         "Game Starting Soon",
                         f"Astros game starts in ~{int(minutes_until)} min!"
                     )
+                # Lineups usually post a few hours before first pitch —
+                # start checking within 4 hours of game time.
+                if game_pk and minutes_until is not None and minutes_until <= 240:
+                    self._check_lineup(game_pk)
 
             # If live: fetch live data, check scoring plays, update lineup
             if new_state == "live" and game_pk:
@@ -1827,15 +1845,8 @@ class AstrosMenuBarApp(rumps.App):
                         )
                     self.previous_astros_score = current_astros_runs
 
-                # Update lineup
-                boxscore = fetch_boxscore(game_pk)
-                new_lineup = parse_lineup(boxscore, ASTROS_TEAM_ID)
-                if new_lineup:
-                    had_lineup = bool(self.lineup_data)
-                    self.lineup_data = new_lineup
-                    notifs = self.config.get("notifications", {})
-                    if not had_lineup and notifs.get("lineup_posted", False):
-                        self.send_notification("Lineup Posted", "Astros lineup has been announced!")
+                # Update lineup (also catches in-game substitutions)
+                self._check_lineup(game_pk)
 
         except Exception as exc:
             logging.exception("refresh_primary error: %s", exc)
