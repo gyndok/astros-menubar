@@ -5,16 +5,29 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_SCRIPT="$SCRIPT_DIR/astros_menubar.py"
 PLIST_NAME="com.gyndok.astros-menubar"
 PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
-PYTHON="/opt/homebrew/bin/python3.13"
 
 echo "=== Astros Menu Bar Installer ==="
 
-# Check Python
-if [ ! -x "$PYTHON" ]; then
-    echo "ERROR: Python 3.13 not found at $PYTHON"
-    echo "Install with: brew install python@3.13"
+# Find a Homebrew Python (framework build — required for menu bar apps).
+# Works on Apple Silicon (/opt/homebrew) and Intel (/usr/local).
+PYTHON=""
+for candidate in \
+    /opt/homebrew/bin/python3 \
+    /usr/local/bin/python3 \
+    /opt/homebrew/bin/python3.* \
+    /usr/local/bin/python3.*; do
+    if [ -x "$candidate" ]; then
+        PYTHON="$candidate"
+        break
+    fi
+done
+
+if [ -z "$PYTHON" ]; then
+    echo "ERROR: Homebrew Python not found."
+    echo "Install with: brew install python"
     exit 1
 fi
+echo "Using Python: $PYTHON"
 
 # Install Python dependencies
 echo "Installing Python dependencies..."

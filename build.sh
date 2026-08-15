@@ -2,7 +2,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PYTHON="/opt/homebrew/bin/python3.13"
+PYTHON="${PYTHON:-$(command -v /opt/homebrew/bin/python3 || command -v /usr/local/bin/python3 || command -v python3)}"
 
 echo "=== Astros Menu Bar — Build ==="
 
@@ -32,7 +32,7 @@ if [ -d "dist/Astros Menu Bar.app" ]; then
     cd dist
     zip -r "Astros Menu Bar.zip" "Astros Menu Bar.app" -x "*.DS_Store"
     echo "Zip created: $SCRIPT_DIR/dist/Astros Menu Bar.zip"
-    echo "Send this file to your brother and sister!"
+    echo "Share this file with your fellow Astros fans!"
 else
     echo ""
     echo "=== Build Failed ==="
