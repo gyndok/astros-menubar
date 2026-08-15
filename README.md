@@ -41,8 +41,8 @@ Polling is adaptive: 60s during games and the half hour before first pitch,
 ### Option 1: Download the app (Apple Silicon)
 
 Grab the latest `.zip` from [Releases](https://github.com/gyndok/astros-menubar/releases),
-unzip, drag **Astros Menu Bar.app** to Applications, and **right-click → Open**
-the first time (unsigned-app warning).
+unzip, drag **Astros Menu Bar.app** to Applications, and double-click.
+Signed and notarized by Apple — no security warnings.
 
 ### Option 2: From source (any Mac)
 
