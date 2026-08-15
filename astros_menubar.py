@@ -248,6 +248,59 @@ def fetch_schedule(start_date: str, end_date: str) -> list:
         return []
 
 
+def fetch_league_scores() -> list:
+    """Fetch today's games league-wide, with linescores and team abbreviations."""
+    try:
+        today = now_local().strftime("%Y-%m-%d")
+        url = (
+            f"{MLB_API_BASE}/schedule?sportId=1&date={today}"
+            f"&hydrate=linescore,team"
+        )
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        return [g for de in data.get("dates", []) for g in de.get("games", [])]
+    except Exception as exc:
+        logging.exception("fetch_league_scores failed: %s", exc)
+        return []
+
+
+NON_GAME_STATES = {"Postponed": "PPD", "Cancelled": "CNX", "Suspended": "SUSP"}
+
+
+def format_league_game(game: dict) -> str:
+    """One-line scoreboard row for a league-wide game."""
+    away = game.get("teams", {}).get("away", {})
+    home = game.get("teams", {}).get("home", {})
+    away_abbr = away.get("team", {}).get("abbreviation", "?")
+    home_abbr = home.get("team", {}).get("abbreviation", "?")
+    star = "⭐ " if ASTROS_TEAM_ID in (
+        away.get("team", {}).get("id"), home.get("team", {}).get("id")
+    ) else ""
+
+    detailed = game.get("status", {}).get("detailedState", "")
+    if detailed in NON_GAME_STATES:
+        return f"{star}{away_abbr} @ {home_abbr}   {NON_GAME_STATES[detailed]}"
+
+    status = _game_status(game)
+    if status == "live":
+        ls = game.get("linescore", {})
+        half = "▲" if ls.get("isTopInning", True) else "▼"
+        inning = ls.get("currentInning", "")
+        return (
+            f"{star}{away_abbr} {away.get('score', 0)} — "
+            f"{home_abbr} {home.get('score', 0)}   {half}{inning}"
+        )
+    if status == "final":
+        innings = len(game.get("linescore", {}).get("innings", []))
+        suffix = f"F/{innings}" if innings and innings != 9 else "F"
+        return (
+            f"{star}{away_abbr} {away.get('score', 0)} — "
+            f"{home_abbr} {home.get('score', 0)}   {suffix}"
+        )
+    return f"{star}{away_abbr} @ {home_abbr}   {format_game_time(game)}"
+
+
 def fetch_live_game(game_pk: int) -> dict:
     """Fetch live game feed for score, inning, count, runners, matchup."""
     try:
@@ -853,6 +906,7 @@ class AstrosMenuBarApp(rumps.App):
 
         # Load cached data from disk
         self.schedule_data = read_cache("schedule").get("games", [])
+        self.league_scores: list = read_cache("league_scores").get("games", [])
         self.standings_data = read_cache("standings").get("records", [])
         self.odds_data = read_cache("odds")
         self.weather_data = read_cache("weather")
@@ -903,6 +957,10 @@ class AstrosMenuBarApp(rumps.App):
         # Rotation submenu
         self.rotation_menu = rumps.MenuItem("⚾ Starting Rotation")
         self.rotation_menu.update([rumps.MenuItem("Loading...")])
+
+        # League-wide scores submenu
+        self.scores_menu = rumps.MenuItem("🌎 MLB Scores")
+        self.scores_menu.update([rumps.MenuItem("Loading...")])
 
         # Standings submenu
         self.standings_menu = rumps.MenuItem("📊 Standings")
@@ -978,6 +1036,7 @@ class AstrosMenuBarApp(rumps.App):
             self.lineup_menu,
             self.rotation_menu,
             None,  # separator
+            self.scores_menu,
             self.standings_menu,
             self.magic_menu,
             self.odds_menu,
@@ -1377,6 +1436,45 @@ class AstrosMenuBarApp(rumps.App):
             label = f"{p['name']} — Next: {p['date']} ({wins}-{losses}, {era} ERA)"
             self.rotation_menu.update([rumps.MenuItem(label, callback=AstrosMenuBarApp._noop)])
 
+    def update_scores_menu(self) -> None:
+        """League-wide scoreboard in three sections: live, completed, upcoming."""
+        self.scores_menu.clear()
+        games = self.league_scores
+        if not games:
+            self.scores_menu.update([self._item("No MLB games today")])
+            return
+
+        live: List[dict] = []
+        completed: List[dict] = []
+        upcoming: List[dict] = []
+        for g in games:
+            if g.get("status", {}).get("detailedState", "") in NON_GAME_STATES:
+                completed.append(g)
+                continue
+            status = _game_status(g)
+            if status == "live":
+                live.append(g)
+            elif status == "final":
+                completed.append(g)
+            else:
+                upcoming.append(g)
+
+        rows: List[Any] = []
+
+        def add_section(header: str, section_games: List[dict]) -> None:
+            if not section_games:
+                return
+            if rows:
+                rows.append(None)
+            rows.append(self._item(header))
+            for g in section_games:
+                rows.append(self._item(f"   {format_league_game(g)}"))
+
+        add_section("🔴 Live", live)
+        add_section("✅ Completed", completed)
+        add_section("🕐 Upcoming", upcoming)
+        self.scores_menu.update(rows)
+
     def update_standings_menu(self) -> None:
         """Full drill-down standings: MLB > League > Division."""
         self.standings_menu.clear()
@@ -1628,6 +1726,7 @@ class AstrosMenuBarApp(rumps.App):
         self.update_schedule_menu()
         self.update_lineup_menu()
         self.update_rotation_menu()
+        self.update_scores_menu()
         self.update_standings_menu()
         self.update_magic_menu()
         self.update_odds_menu()
@@ -1642,6 +1741,9 @@ class AstrosMenuBarApp(rumps.App):
             end = (now_local() + dt.timedelta(days=14)).strftime("%Y-%m-%d")
             self.schedule_data = fetch_schedule(today, end)
             write_cache("schedule", {"games": self.schedule_data})
+
+            self.league_scores = fetch_league_scores()
+            write_cache("league_scores", {"games": self.league_scores})
 
             self.game_state = detect_game_state(self.schedule_data)
             state = self.game_state.get("state", "off")
@@ -1734,6 +1836,11 @@ class AstrosMenuBarApp(rumps.App):
             if new_schedule:
                 self.schedule_data = new_schedule
                 write_cache("schedule", {"games": self.schedule_data})
+
+            new_scores = fetch_league_scores()
+            if new_scores:
+                self.league_scores = new_scores
+                write_cache("league_scores", {"games": self.league_scores})
 
             old_state = self.game_state.get("state", "off")
             new_game_state = detect_game_state(self.schedule_data)
