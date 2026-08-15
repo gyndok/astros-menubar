@@ -65,7 +65,7 @@ BALLPARK_COORDS = {
     120: (25.7781, -80.2196),    # Miami Marlins - loanDepot park
     121: (43.0281, -87.9712),    # Milwaukee Brewers - American Family Field
     133: (38.5806, -121.5083),   # Oakland Athletics - Sutter Health Park (Sacramento)
-    134: (40.8296, -73.9262),    # Pittsburgh Pirates - PNC Park
+    134: (40.4469, -80.0057),    # Pittsburgh Pirates - PNC Park
     135: (32.7076, -117.1570),   # San Diego Padres - Petco Park
     136: (47.5914, -122.3325),   # Seattle Mariners - T-Mobile Park
     137: (37.7786, -122.3893),   # San Francisco Giants - Oracle Park
@@ -305,6 +305,108 @@ def fetch_standings() -> list:
         return []
 
 
+AL_DIVISION_IDS = {200, 201, 202}
+
+
+def flatten_league_teams(standings: list, division_ids: set) -> list:
+    """Flatten standings records into one list of team dicts for a league."""
+    teams = []
+    for record in standings:
+        div_id = record.get("division", {}).get("id")
+        if div_id not in division_ids:
+            continue
+        for tr in record.get("teamRecords", []):
+            rec = tr.get("leagueRecord", {})
+            teams.append({
+                "id": tr.get("team", {}).get("id"),
+                "name": tr.get("team", {}).get("name", "?"),
+                "wins": int(rec.get("wins", 0)),
+                "losses": int(rec.get("losses", 0)),
+                "div_id": div_id,
+                "games_back": tr.get("gamesBack", "-"),
+                "league_rank": tr.get("leagueRank", ""),
+                "magic_number": tr.get("magicNumber"),
+                "elimination_number": tr.get("eliminationNumber"),
+                "wc_elimination_number": tr.get("wildCardEliminationNumber"),
+                "clinched": bool(tr.get("clinched", False)),
+                "division_champ": bool(tr.get("divisionChamp", False)),
+                "division_leader": bool(tr.get("divisionLeader", False)),
+            })
+    return teams
+
+
+def magic_number_vs(team_wins: int, rival_losses: int) -> int:
+    """Wins + rival losses still needed to guarantee finishing ahead of rival.
+
+    Standard formula: 162 + 1 - W_team - L_rival, floored at 0.
+    """
+    return max(0, 163 - team_wins - rival_losses)
+
+
+def compute_magic_numbers(standings: list) -> dict:
+    """Compute Astros magic numbers from standings data.
+
+    Returns division / playoff-berth / wild-card / #1-seed magic numbers.
+    All numbers ignore tiebreakers (same convention as published numbers).
+    The rival for each race is the relevant team with the fewest losses:
+      - division: fewest losses among other AL West teams
+      - playoffs (6 AL spots): 6th-fewest losses among the other 14 AL teams
+      - wild card (3 spots): 4th-fewest losses among non-division-leaders
+      - #1 seed: fewest losses among all other AL teams
+    """
+    teams = flatten_league_teams(standings, AL_DIVISION_IDS)
+    astros = next((t for t in teams if t["id"] == ASTROS_TEAM_ID), None)
+    if not astros:
+        return {}
+    others = [t for t in teams if t["id"] != ASTROS_TEAM_ID]
+    if not others:
+        return {}
+    wins = astros["wins"]
+
+    result = {
+        "wins": wins,
+        "losses": astros["losses"],
+        "remaining": max(0, 162 - wins - astros["losses"]),
+        "games_back": astros["games_back"],
+        "league_rank": str(astros.get("league_rank", "")),
+        "division_leader": astros["division_leader"],
+        "division_champ": astros["division_champ"],
+        "clinched_postseason": astros["clinched"],
+        "division_eliminated": astros.get("elimination_number") == "E",
+        "wc_eliminated": astros.get("wc_elimination_number") == "E",
+    }
+
+    # Division: prefer MLB's published magic number when present
+    division_mn = None
+    api_mn = astros.get("magic_number")
+    if api_mn not in (None, "", "-"):
+        try:
+            division_mn = int(api_mn)
+        except (TypeError, ValueError):
+            division_mn = None
+    div_rivals = [t for t in others if t["div_id"] == astros["div_id"]]
+    if division_mn is None and div_rivals:
+        division_mn = magic_number_vs(wins, min(t["losses"] for t in div_rivals))
+    result["division"] = division_mn if division_mn is not None else 0
+
+    # Playoff berth: hold off all but 5 other AL teams (6 total spots)
+    all_losses = sorted(t["losses"] for t in others)
+    result["playoffs"] = magic_number_vs(wins, all_losses[5]) if len(all_losses) > 5 else 0
+
+    # Wild card: 3 spots among teams not leading their division
+    non_leader_losses = sorted(
+        t["losses"] for t in others if not t["division_leader"]
+    )
+    result["wild_card"] = (
+        magic_number_vs(wins, non_leader_losses[3]) if len(non_leader_losses) > 3 else 0
+    )
+
+    # #1 AL seed: finish ahead of every other AL team
+    result["top_seed"] = magic_number_vs(wins, all_losses[0])
+
+    return result
+
+
 def fetch_team_stats() -> dict:
     """Fetch Astros team hitting and pitching stats for current season."""
     result = {}
@@ -371,7 +473,8 @@ def fetch_odds(api_key: str) -> dict:
                 return event
         return {}
     except Exception as exc:
-        logging.exception("fetch_odds failed: %s", exc)
+        # Don't log the raw exception — request URLs embed the API key.
+        logging.error("fetch_odds failed: %s", str(exc).replace(api_key, "***"))
         return {}
 
 
@@ -445,25 +548,44 @@ def fetch_weather(team_id: int) -> dict:
 # Task 4: Game state detection and display helpers
 # ---------------------------------------------------------------------------
 
+def _game_status(game: dict) -> str:
+    """Classify a single game as 'live', 'final', or 'pre'."""
+    status = game.get("status", {})
+    abstract = status.get("abstractGameState", "")
+    detailed = status.get("detailedState", "")
+    if abstract == "Live" or detailed == "In Progress":
+        return "live"
+    if abstract == "Final" or detailed == "Final":
+        return "final"
+    return "pre"
+
+
 def detect_game_state(games: list) -> dict:
-    """Determine current game state from today's schedule."""
+    """Determine current game state from today's schedule.
+
+    Doubleheader-aware: prefer a live game, then the next un-played game,
+    otherwise the last final. Postponed/cancelled games are ignored (they
+    report abstractGameState 'Final' and would show a bogus 0-0 final).
+    """
     today = now_local().strftime("%Y-%m-%d")
-    todays_games = [g for g in games if g.get("officialDate") == today]
+    todays_games = [
+        g for g in games
+        if g.get("officialDate") == today
+        and g.get("status", {}).get("detailedState", "") not in
+        ("Postponed", "Cancelled", "Suspended")
+    ]
 
     if not todays_games:
         return {"state": "off", "game": None, "game_pk": None}
 
-    game = todays_games[0]
-    status = game.get("status", {})
-    abstract = status.get("abstractGameState", "")
-    detailed = status.get("detailedState", "")
-
-    if abstract == "Live" or detailed == "In Progress":
-        return {"state": "live", "game": game, "game_pk": game["gamePk"]}
-    elif abstract == "Final" or detailed == "Final":
-        return {"state": "final", "game": game, "game_pk": game["gamePk"]}
-    else:
-        return {"state": "pre", "game": game, "game_pk": game["gamePk"]}
+    for game in todays_games:
+        if _game_status(game) == "live":
+            return {"state": "live", "game": game, "game_pk": game["gamePk"]}
+    for game in todays_games:
+        if _game_status(game) == "pre":
+            return {"state": "pre", "game": game, "game_pk": game["gamePk"]}
+    game = todays_games[-1]
+    return {"state": "final", "game": game, "game_pk": game["gamePk"]}
 
 
 def get_astros_side(game: dict) -> str:
@@ -620,6 +742,8 @@ def generate_game_text(game_state: dict, live_data: dict, schedule_data: list) -
     if state == "final":
         a_score = game["teams"][side].get("score", 0) or 0
         o_score = game["teams"][opp_side].get("score", 0) or 0
+        if a_score == o_score:
+            return f"Final: Astros {a_score}, {opp_name} {o_score}. A tie?? In baseball?? What year is it."
         if a_score > o_score:
             win_msgs = [
                 f"Astros {a_score}, {opp_name} {o_score}. SHOOT IT HOUSTON TEXAS! 🚀🤘",
@@ -722,6 +846,9 @@ class AstrosMenuBarApp(rumps.App):
         self.previous_astros_score: Optional[int] = None
         self.final_revert_time: Optional[dt.datetime] = None
         self._did_initial_refresh: bool = False
+        self._starting_soon_pk: Optional[int] = None  # dedup "starting soon" notification
+        self._score_watch_pk: Optional[int] = None    # reset score tracking per game
+        self.pitcher_stats_cache: Dict[int, dict] = {}
 
         # Load cached data from disk
         self.schedule_data = read_cache("schedule").get("games", [])
@@ -731,6 +858,12 @@ class AstrosMenuBarApp(rumps.App):
         self.team_stats = read_cache("team_stats")
 
         self._build_menu()
+
+        # Primary polling timer. Owned explicitly (rather than via the
+        # @rumps.timer decorator) so refresh_primary can adapt its interval
+        # to the game state.
+        self.primary_timer = rumps.Timer(self.refresh_primary, 60)
+        self.primary_timer.start()
 
     # ------------------------------------------------------------------
     # Menu construction
@@ -773,6 +906,10 @@ class AstrosMenuBarApp(rumps.App):
         # Standings submenu
         self.standings_menu = rumps.MenuItem("📊 Standings")
         self.standings_menu.update([rumps.MenuItem("Loading...")])
+
+        # Magic Numbers submenu
+        self.magic_menu = rumps.MenuItem("🔮 Magic Numbers")
+        self.magic_menu.update([rumps.MenuItem("Loading...")])
 
         # Odds submenu
         self.odds_menu = rumps.MenuItem("💰 Vegas Odds")
@@ -841,6 +978,7 @@ class AstrosMenuBarApp(rumps.App):
             self.rotation_menu,
             None,  # separator
             self.standings_menu,
+            self.magic_menu,
             self.odds_menu,
             self.weather_menu,
             None,  # separator
@@ -962,7 +1100,12 @@ class AstrosMenuBarApp(rumps.App):
                     astros_score = teams.get(side, {}).get("score", 0) or 0
                     opp_side = "home" if side == "away" else "away"
                     opp_score = teams.get(opp_side, {}).get("score", 0) or 0
-                    self.title = "⚾🟢" if astros_score >= opp_score else "⚾🔴"
+                    if astros_score > opp_score:
+                        self.title = "⚾🟢"
+                    elif astros_score < opp_score:
+                        self.title = "⚾🔴"
+                    else:
+                        self.title = "⚾🟡"
                 else:
                     self.title = "⚾"
         else:
@@ -1226,7 +1369,7 @@ class AstrosMenuBarApp(rumps.App):
             return
 
         for p in pitchers[:6]:
-            stats = fetch_pitcher_stats(p["id"]) if p["id"] else {}
+            stats = self.pitcher_stats_cache.get(p["id"], {})
             wins = stats.get("wins", 0)
             losses = stats.get("losses", 0)
             era = stats.get("era", "—")
@@ -1280,10 +1423,14 @@ class AstrosMenuBarApp(rumps.App):
 
             # Wild Card section
             wc_item = rumps.MenuItem("Wild Card")
-            wc_teams_sorted = sorted(
-                wc_teams,
-                key=lambda t: float(t.get("wildCardGamesBack", "99").replace("-", "0") or "0")
-            )[:10]
+
+            def _wc_key(tr: dict) -> int:
+                try:
+                    return int(tr.get("wildCardRank"))
+                except (TypeError, ValueError):
+                    return 999
+
+            wc_teams_sorted = sorted(wc_teams, key=_wc_key)[:10]
             for tr in wc_teams_sorted:
                 tname = tr.get("team", {}).get("name", "Unknown")
                 rec = tr.get("leagueRecord", {})
@@ -1294,6 +1441,70 @@ class AstrosMenuBarApp(rumps.App):
             league_item.update([wc_item])
 
             self.standings_menu.update([league_item])
+
+    def update_magic_menu(self) -> None:
+        """Show magic numbers: division, playoff berth, wild card, #1 seed."""
+        self.magic_menu.clear()
+        mn = compute_magic_numbers(self.standings_data)
+        if not mn:
+            self.magic_menu.update([self._item("Standings unavailable")])
+            return
+
+        rows: List[Any] = [
+            self._item(f"HOU {mn['wins']}-{mn['losses']}  |  {mn['remaining']} games left"),
+            None,
+        ]
+
+        # Division
+        if mn["division_champ"]:
+            rows.append(self._item("🏆 AL West: ✅ CLINCHED"))
+        elif mn["division_eliminated"]:
+            rows.append(self._item("🏆 AL West: ✗ Eliminated"))
+        else:
+            label = f"🏆 Win AL West: {mn['division']}"
+            if not mn["division_leader"]:
+                label += f"  ({mn['games_back']} GB)"
+            rows.append(self._item(label))
+
+        # Playoff berth
+        if mn["clinched_postseason"]:
+            rows.append(self._item("🎟 Playoff Berth: ✅ CLINCHED"))
+        elif mn["division_eliminated"] and mn["wc_eliminated"]:
+            rows.append(self._item("🎟 Playoffs: ✗ Eliminated"))
+        else:
+            rows.append(self._item(f"🎟 Make the Playoffs: {mn['playoffs']}"))
+
+        # Wild card
+        if mn["wc_eliminated"]:
+            rows.append(self._item("🃏 Wild Card: ✗ Eliminated"))
+        else:
+            rows.append(self._item(f"🃏 Clinch a Wild Card: {mn['wild_card']}"))
+
+        # 1 seed
+        seed_label = f"🥇 Clinch #1 AL Seed: {mn['top_seed']}"
+        if mn["league_rank"] and mn["league_rank"] != "1":
+            seed_label += f"  (now #{mn['league_rank']} in AL)"
+        rows.append(self._item(seed_label))
+
+        rows.append(None)
+        rows.append(self._item("Magic # = HOU wins + rival losses needed (no tiebreakers)"))
+        self.magic_menu.update(rows)
+
+    def _refresh_pitcher_stats(self) -> None:
+        """Fetch season stats for upcoming probable starters (network calls —
+        only invoked from the full/slow refresh paths, not every tick)."""
+        today = now_local().strftime("%Y-%m-%d")
+        upcoming = [g for g in self.schedule_data if g.get("officialDate", "") >= today]
+        pitcher_ids: List[int] = []
+        for game in upcoming:
+            sp = get_probable_pitcher(game, get_astros_side(game))
+            pid = sp.get("id")
+            if pid and pid not in pitcher_ids:
+                pitcher_ids.append(pid)
+        for pid in pitcher_ids[:6]:
+            stats = fetch_pitcher_stats(pid)
+            if stats:
+                self.pitcher_stats_cache[pid] = stats
 
     def update_odds_menu(self) -> None:
         """Show odds for the Astros game."""
@@ -1319,6 +1530,16 @@ class AstrosMenuBarApp(rumps.App):
         over_d = total.get("over", {})
         under_d = total.get("under", {})
 
+        # commence_time is the game's first pitch (UTC ISO) — show local time
+        first_pitch = updated
+        try:
+            first_pitch = (
+                dt.datetime.fromisoformat(updated.replace("Z", "+00:00"))
+                .astimezone().strftime("%a %-I:%M %p")
+            )
+        except Exception:
+            pass
+
         self.odds_menu.update([
             rumps.MenuItem(f"Game: {matchup}", callback=AstrosMenuBarApp._noop),
             None,
@@ -1334,7 +1555,7 @@ class AstrosMenuBarApp(rumps.App):
                 callback=AstrosMenuBarApp._noop,
             ),
             None,
-            rumps.MenuItem(f"Updated: {updated}", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"First Pitch: {first_pitch}", callback=AstrosMenuBarApp._noop),
         ])
 
     def update_weather_menu(self) -> None:
@@ -1355,19 +1576,12 @@ class AstrosMenuBarApp(rumps.App):
         wind_kmh = w.get("wind_kmh", 0)
         updated = w.get("updated", "")
 
-        # Determine venue team
+        # Name the ballpark the forecast is for
         game = self.game_state.get("game")
-        if game:
-            opp_team_id_val = opponent_team_id(game)
-            astros_side = get_astros_side(game)
-            venue_team_id = ASTROS_TEAM_ID if astros_side == "home" else opp_team_id_val
-        else:
-            venue_team_id = ASTROS_TEAM_ID
-
-        venue_coords = BALLPARK_COORDS.get(venue_team_id, BALLPARK_COORDS[ASTROS_TEAM_ID])
-        venue_names = {v: k for k, v in BALLPARK_COORDS.items()}
+        venue_name = (game or {}).get("venue", {}).get("name", "") or "Daikin Park"
 
         self.weather_menu.update([
+            rumps.MenuItem(f"📍 {venue_name}", callback=AstrosMenuBarApp._noop),
             rumps.MenuItem(f"Temp: {temp_f:.0f}°F / {temp_c:.0f}°C", callback=AstrosMenuBarApp._noop),
             rumps.MenuItem(f"Condition: {condition}", callback=AstrosMenuBarApp._noop),
             rumps.MenuItem(f"H/L: {max_f:.0f}°F / {min_f:.0f}°F  ({max_c:.0f}°C / {min_c:.0f}°C)", callback=AstrosMenuBarApp._noop),
@@ -1414,6 +1628,7 @@ class AstrosMenuBarApp(rumps.App):
         self.update_lineup_menu()
         self.update_rotation_menu()
         self.update_standings_menu()
+        self.update_magic_menu()
         self.update_odds_menu()
         self.update_weather_menu()
         self.update_stats_menu()
@@ -1430,6 +1645,14 @@ class AstrosMenuBarApp(rumps.App):
             self.game_state = detect_game_state(self.schedule_data)
             state = self.game_state.get("state", "off")
             game_pk = self.game_state.get("game_pk")
+
+            # Keep the final-score icon color for 30 min, then revert —
+            # also when the app starts up on an already-final game.
+            if state == "final":
+                if self.final_revert_time is None:
+                    self.final_revert_time = now_local() + dt.timedelta(minutes=30)
+            else:
+                self.final_revert_time = None
 
             if state == "live" and game_pk:
                 feed = fetch_live_game(game_pk)
@@ -1451,6 +1674,8 @@ class AstrosMenuBarApp(rumps.App):
             self.team_stats = fetch_team_stats()
             write_cache("team_stats", self.team_stats)
 
+            self._refresh_pitcher_stats()
+
             api_key = self.config.get("odds_api_key", "")
             if api_key:
                 self.odds_data = fetch_odds(api_key)
@@ -1470,9 +1695,18 @@ class AstrosMenuBarApp(rumps.App):
         finally:
             self._update_all_menus()
 
-    @rumps.timer(60)
+    def _set_interval(self, seconds: int) -> None:
+        """Adjust the primary timer interval if it changed."""
+        try:
+            if self.primary_timer.interval != seconds:
+                self.primary_timer.interval = seconds
+                logging.info("primary timer interval -> %ss", seconds)
+        except Exception as exc:
+            logging.exception("_set_interval failed: %s", exc)
+
     def refresh_primary(self, sender: Any) -> None:
-        """Called roughly every 60 seconds; handles game-state transitions."""
+        """Primary tick; handles game-state transitions. Interval adapts:
+        60s live/near game time, 15 min pre-game/final, 30 min off days."""
         # On first tick, do a full refresh so all data is populated immediately
         if not self._did_initial_refresh:
             self._did_initial_refresh = True
@@ -1493,11 +1727,13 @@ class AstrosMenuBarApp(rumps.App):
             game_pk = new_game_state.get("game_pk")
             game = new_game_state.get("game")
 
+            # Commit the new state FIRST so a failure below can never leave
+            # us stuck re-detecting the same transition forever.
+            self.game_state = new_game_state
+
             # State transition: entering live
             if old_state != "live" and new_state == "live":
                 logging.info("Game going live")
-                if self.primary_timer:
-                    self.primary_timer.interval = 60
                 notifs = self.config.get("notifications", {})
                 if notifs.get("game_starting", True):
                     self.send_notification("Game Starting", "The Astros game is underway!")
@@ -1505,9 +1741,6 @@ class AstrosMenuBarApp(rumps.App):
             # State transition: live ending → final
             if old_state == "live" and new_state == "final":
                 logging.info("Game ended — final")
-                self.final_revert_time = now_local() + dt.timedelta(minutes=30)
-                if self.primary_timer:
-                    self.primary_timer.interval = 1800
                 notifs = self.config.get("notifications", {})
                 if notifs.get("final_score", True) and game:
                     side = get_astros_side(game)
@@ -1522,35 +1755,54 @@ class AstrosMenuBarApp(rumps.App):
                         f"Astros {astros_score}, {opp_name.split()[-1]} {opp_score} — {result}"
                     )
 
-            # Pre-game: set slow timer, check "starting soon"
-            if new_state == "pre":
-                if self.primary_timer:
-                    self.primary_timer.interval = 1800
-                if game:
-                    game_date_str = game.get("gameDate", "")
-                    if game_date_str:
-                        try:
-                            utc_dt = dt.datetime.fromisoformat(game_date_str.replace("Z", "+00:00"))
-                            local_dt = utc_dt.astimezone()
-                            minutes_until = (local_dt - now_local().astimezone()).total_seconds() / 60
-                            notifs = self.config.get("notifications", {})
-                            if 0 < minutes_until <= 15 and notifs.get("game_starting", True):
-                                self.send_notification(
-                                    "Game Starting Soon",
-                                    f"Astros game starts in ~{int(minutes_until)} min!"
-                                )
-                        except Exception:
-                            pass
+            # Final-score icon: hold color 30 min, then revert
+            if new_state == "final":
+                if self.final_revert_time is None:
+                    self.final_revert_time = now_local() + dt.timedelta(minutes=30)
+            else:
+                self.final_revert_time = None
 
-            # Off day
-            if new_state == "off":
-                if self.primary_timer:
-                    self.primary_timer.interval = 3600
-
-            self.game_state = new_game_state
+            # Adaptive polling interval + "starting soon" notification
+            if new_state == "live":
+                self._set_interval(60)
+            elif new_state == "final":
+                self._set_interval(900)
+            elif new_state == "off":
+                self._set_interval(1800)
+            elif new_state == "pre":
+                minutes_until = None
+                game_date_str = (game or {}).get("gameDate", "")
+                if game_date_str:
+                    try:
+                        utc_dt = dt.datetime.fromisoformat(game_date_str.replace("Z", "+00:00"))
+                        local_dt = utc_dt.astimezone()
+                        minutes_until = (local_dt - now_local().astimezone()).total_seconds() / 60
+                    except Exception:
+                        minutes_until = None
+                # Poll fast near first pitch so "live" is caught promptly
+                if minutes_until is not None and minutes_until <= 30:
+                    self._set_interval(60)
+                else:
+                    self._set_interval(900)
+                notifs = self.config.get("notifications", {})
+                if (
+                    minutes_until is not None
+                    and 0 < minutes_until <= 15
+                    and notifs.get("game_starting", True)
+                    and self._starting_soon_pk != game_pk  # only notify once per game
+                ):
+                    self._starting_soon_pk = game_pk
+                    self.send_notification(
+                        "Game Starting Soon",
+                        f"Astros game starts in ~{int(minutes_until)} min!"
+                    )
 
             # If live: fetch live data, check scoring plays, update lineup
             if new_state == "live" and game_pk:
+                # New game (or game 2 of a doubleheader): reset score tracking
+                if game_pk != self._score_watch_pk:
+                    self._score_watch_pk = game_pk
+                    self.previous_astros_score = None
                 feed = fetch_live_game(game_pk)
                 self.live_data = parse_live_data(feed)
 
@@ -1601,6 +1853,8 @@ class AstrosMenuBarApp(rumps.App):
             self.team_stats = fetch_team_stats()
             write_cache("team_stats", self.team_stats)
 
+            self._refresh_pitcher_stats()
+
             api_key = self.config.get("odds_api_key", "")
             if api_key:
                 self.odds_data = fetch_odds(api_key)
@@ -1619,7 +1873,9 @@ class AstrosMenuBarApp(rumps.App):
             logging.exception("refresh_slow error: %s", exc)
         finally:
             self.update_standings_menu()
+            self.update_magic_menu()
             self.update_stats_menu()
+            self.update_rotation_menu()
             self.update_odds_menu()
             self.update_weather_menu()
 
