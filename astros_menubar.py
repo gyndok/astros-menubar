@@ -22,10 +22,12 @@ import rumps
 import yaml
 from AppKit import (
     NSAttributedString,
+    NSBundle,
     NSColor,
     NSFont,
     NSFontAttributeName,
     NSForegroundColorAttributeName,
+    NSRunningApplication,
 )
 
 APP_NAME = "Astros Menu Bar"
@@ -156,18 +158,65 @@ LAUNCH_AGENT_LABEL = "com.gyndok.astros-menubar"
 LAUNCH_AGENT_PATH = Path.home() / "Library" / "LaunchAgents" / f"{LAUNCH_AGENT_LABEL}.plist"
 
 
+BUNDLE_ID = "com.gyndok.astros-menubar"
+
+
+def _bundle_executable() -> Optional[str]:
+    """Path of the .app's main executable, or None when running from source."""
+    try:
+        bundle = NSBundle.mainBundle()
+        if bundle.bundleIdentifier() == BUNDLE_ID:
+            return str(bundle.executablePath())
+    except Exception:
+        pass
+    return None
+
+
+def terminate_other_instances() -> None:
+    """If another copy of the bundled app is running, quit it — the newly
+    launched copy wins. Makes replacing the app with a newer version a
+    clean handoff instead of two menu bar items."""
+    if _bundle_executable() is None:
+        return  # running from source — never touch other processes
+    try:
+        import os
+        me = os.getpid()
+        for ra in NSRunningApplication.runningApplicationsWithBundleIdentifier_(BUNDLE_ID):
+            if ra.processIdentifier() != me:
+                logging.info("Terminating older instance (pid %s)", ra.processIdentifier())
+                ra.terminate()
+    except Exception as exc:
+        logging.exception("terminate_other_instances failed: %s", exc)
+
+
 def install_launch_agent() -> None:
-    """Auto-install LaunchAgent on first run so the app starts on login."""
-    if LAUNCH_AGENT_PATH.exists():
-        return
-    # Determine the executable — if running from a .app bundle, use the
-    # bundle's executable; otherwise use the script path directly.
+    """Install (or repair) the LaunchAgent so the app starts on login."""
     import sys
-    executable = sys.executable
+    bundle_exec = _bundle_executable()
+    executable = bundle_exec or sys.executable
     script = str(Path(__file__).resolve())
 
+    if LAUNCH_AGENT_PATH.exists():
+        if bundle_exec is None:
+            return  # running from source — leave any custom agent alone
+        # Rewrite the agent if it points somewhere stale (the app was
+        # moved, e.g. Downloads → Applications, or replaced by an update
+        # at a different path). Same path → nothing to do.
+        try:
+            import plistlib
+            with LAUNCH_AGENT_PATH.open("rb") as f:
+                existing = plistlib.load(f)
+            args = existing.get("ProgramArguments", [])
+            if args and args[0] == executable:
+                return
+            if any("astros_menubar.py" in str(a) for a in args):
+                return  # source-based install (dev setup) — respect it
+        except Exception:
+            pass  # unreadable plist — rewrite it below
+        subprocess.run(["launchctl", "unload", str(LAUNCH_AGENT_PATH)], check=False)
+
     # If inside a .app bundle, the executable IS the app
-    if ".app/Contents" in executable:
+    if bundle_exec is not None:
         program_args = f"<string>{executable}</string>"
     else:
         program_args = f"<string>{executable}</string>\n        <string>{script}</string>"
@@ -2083,6 +2132,7 @@ class AstrosMenuBarApp(rumps.App):
 
 if __name__ == "__main__":
     setup_logging()
+    terminate_other_instances()
     install_launch_agent()
     try:
         app = AstrosMenuBarApp()
