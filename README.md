@@ -12,14 +12,16 @@ and a league-wide scoreboard — one click away, all day.
   <img src="docs/screenshot.png" alt="Astros Menu Bar on game day" width="420">
 </p>
 
-The menu bar icon tells you the game state at a glance:
+The menu bar icon is the scoreboard — you never have to open the menu to
+know how the game is going:
 
-| Icon | Meaning |
-|------|---------|
-| ⚾ | No game / normal |
-| ⚾🟢 | Astros winning (or won — held for 30 min after the final) |
-| ⚾🔴 | Astros losing (or lost) |
-| ⚾🟡 | Tied |
+| You see | It means |
+|---------|----------|
+| ⚾ | No game right now |
+| <code>2-5 ▼7</code> in **green** | Game on — Astros winning (away-home score, ▼7 = bottom 7th) |
+| <code>6-5 ▲9</code> in **red** | Astros losing |
+| score in **yellow** | Tied |
+| <code>2-5 F</code> in green/red | Final — held for 30 minutes, then back to ⚾ |
 
 ## Features
 
