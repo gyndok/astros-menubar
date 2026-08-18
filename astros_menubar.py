@@ -1130,7 +1130,11 @@ class AstrosMenuBarApp(rumps.App):
     # ------------------------------------------------------------------
 
     def update_title(self) -> None:
-        """Set menu bar icon based on game state."""
+        """Set menu bar icon based on game state.
+
+        Live games show the score inline: ⚾🟢 2-5 ▼7 (away-home, inning);
+        the dot color tracks the Astros — green winning, red losing, yellow tied.
+        """
         state = self.game_state.get("state", "off")
         if state == "live":
             game = self.game_state.get("game")
@@ -1141,11 +1145,16 @@ class AstrosMenuBarApp(rumps.App):
                 opp_side = "home" if side == "away" else "away"
                 opp_runs = ld.get(f"{opp_side}_runs", 0)
                 if astros_runs > opp_runs:
-                    self.title = "⚾🟢"
+                    dot = "🟢"
                 elif astros_runs < opp_runs:
-                    self.title = "⚾🔴"
+                    dot = "🔴"
                 else:
-                    self.title = "⚾🟡"
+                    dot = "🟡"
+                half_arrow = "▲" if ld.get("half") == "Top" else "▼"
+                inning = ld.get("inning", "")
+                away_runs = ld.get("away_runs", 0)
+                home_runs = ld.get("home_runs", 0)
+                self.title = f"⚾{dot} {away_runs}-{home_runs} {half_arrow}{inning}"
             else:
                 self.title = "⚾"
         elif state == "final":
