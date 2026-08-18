@@ -20,8 +20,17 @@ from typing import Any, Dict, List, Optional
 import requests
 import rumps
 import yaml
+from AppKit import (
+    NSAttributedString,
+    NSColor,
+    NSFont,
+    NSFontAttributeName,
+    NSForegroundColorAttributeName,
+)
 
 APP_NAME = "Astros Menu Bar"
+APP_VERSION = "1.2.0"
+GITHUB_REPO = "gyndok/astros-menubar"
 CONFIG_DIR = Path.home() / ".config" / "astros-menubar"
 CONFIG_PATH = CONFIG_DIR / "config.yaml"
 CACHE_DIR = CONFIG_DIR / "cache"
@@ -1019,10 +1028,11 @@ class AstrosMenuBarApp(rumps.App):
         ])
         self._sync_notification_states()
 
+        check_updates_item = rumps.MenuItem("Check for Updates…", callback=self.check_updates)
         edit_config_item = rumps.MenuItem("Edit Config", callback=self.edit_config)
         quit_item = rumps.MenuItem("Quit", callback=self.quit_app)
 
-        self.settings_menu.update([notif_menu, edit_config_item, quit_item])
+        self.settings_menu.update([notif_menu, check_updates_item, edit_config_item, quit_item])
 
         self.menu = [
             self.top_line_1,
@@ -1090,6 +1100,43 @@ class AstrosMenuBarApp(rumps.App):
         if url:
             webbrowser.open(url)
 
+    def check_updates(self, _sender: Any) -> None:
+        """Compare APP_VERSION with the latest GitHub release; offer download."""
+        try:
+            resp = requests.get(
+                f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
+                timeout=10,
+            )
+            resp.raise_for_status()
+            release = resp.json()
+            latest = release.get("tag_name", "").lstrip("v")
+            url = release.get(
+                "html_url", f"https://github.com/{GITHUB_REPO}/releases/latest"
+            )
+        except Exception as exc:
+            logging.exception("check_updates failed: %s", exc)
+            rumps.alert("Check for Updates", "Couldn't reach GitHub — try again later.")
+            return
+
+        def as_tuple(version: str) -> tuple:
+            try:
+                return tuple(int(p) for p in version.split("."))
+            except ValueError:
+                return (0,)
+
+        if latest and as_tuple(latest) > as_tuple(APP_VERSION):
+            clicked = rumps.alert(
+                "Update Available",
+                f"Version {latest} is out (you have {APP_VERSION}).\n\n"
+                "Open the download page?",
+                ok="Download",
+                cancel="Later",
+            )
+            if clicked == 1:
+                webbrowser.open(url)
+        else:
+            rumps.alert("Up to Date", f"You're on the latest version ({APP_VERSION}). ⚾")
+
     def edit_config(self, _sender: Any) -> None:
         """Open CONFIG_PATH with the default editor."""
         subprocess.Popen(["open", str(CONFIG_PATH)])
@@ -1129,11 +1176,37 @@ class AstrosMenuBarApp(rumps.App):
     # Title / top section updates
     # ------------------------------------------------------------------
 
-    def update_title(self) -> None:
-        """Set menu bar icon based on game state.
+    _TITLE_COLORS = {
+        "green": NSColor.systemGreenColor,
+        "red": NSColor.systemRedColor,
+        "yellow": NSColor.systemYellowColor,
+    }
 
-        Live games show the score inline: ⚾🟢 2-5 ▼7 (away-home, inning);
-        the dot color tracks the Astros — green winning, red losing, yellow tied.
+    def _set_status_title(self, text: str, color: Optional[str] = None) -> None:
+        """Set the menu bar title, optionally colored green/red/yellow."""
+        self.title = text
+        try:
+            button = self._nsapp.nsstatusitem.button()
+            if color is None:
+                button.setAttributedTitle_(None)
+                return
+            attrs = {
+                NSForegroundColorAttributeName: self._TITLE_COLORS[color](),
+                NSFontAttributeName: NSFont.menuBarFontOfSize_(0),
+            }
+            astr = NSAttributedString.alloc().initWithString_attributes_(text, attrs)
+            button.setAttributedTitle_(astr)
+        except Exception as exc:
+            # Before the app is running there's no status item yet — plain
+            # title (set above) still applies once it exists.
+            logging.debug("colored title unavailable: %s", exc)
+
+    def update_title(self) -> None:
+        """Set the menu bar title based on game state.
+
+        Live: the score, colored — '2-5 ▼7' in green (Astros winning),
+        red (losing), or yellow (tied). Final: '2-5 F' colored by result,
+        held for 30 minutes, then back to a plain ⚾. Otherwise: ⚾.
         """
         state = self.game_state.get("state", "off")
         if state == "live":
@@ -1145,22 +1218,20 @@ class AstrosMenuBarApp(rumps.App):
                 opp_side = "home" if side == "away" else "away"
                 opp_runs = ld.get(f"{opp_side}_runs", 0)
                 if astros_runs > opp_runs:
-                    dot = "🟢"
+                    color = "green"
                 elif astros_runs < opp_runs:
-                    dot = "🔴"
+                    color = "red"
                 else:
-                    dot = "🟡"
+                    color = "yellow"
                 half_arrow = "▲" if ld.get("half") == "Top" else "▼"
-                inning = ld.get("inning", "")
-                away_runs = ld.get("away_runs", 0)
-                home_runs = ld.get("home_runs", 0)
-                self.title = f"⚾{dot} {away_runs}-{home_runs} {half_arrow}{inning}"
+                score = f"{ld.get('away_runs', 0)}-{ld.get('home_runs', 0)}"
+                self._set_status_title(f"{score} {half_arrow}{ld.get('inning', '')}", color)
             else:
-                self.title = "⚾"
+                self._set_status_title("⚾")
         elif state == "final":
             # Revert to plain ⚾ after 30 minutes
             if self.final_revert_time and now_local() >= self.final_revert_time:
-                self.title = "⚾"
+                self._set_status_title("⚾")
             else:
                 game = self.game_state.get("game")
                 if game:
@@ -1169,16 +1240,19 @@ class AstrosMenuBarApp(rumps.App):
                     astros_score = teams.get(side, {}).get("score", 0) or 0
                     opp_side = "home" if side == "away" else "away"
                     opp_score = teams.get(opp_side, {}).get("score", 0) or 0
+                    away_score = teams.get("away", {}).get("score", 0) or 0
+                    home_score = teams.get("home", {}).get("score", 0) or 0
                     if astros_score > opp_score:
-                        self.title = "⚾🟢"
+                        color = "green"
                     elif astros_score < opp_score:
-                        self.title = "⚾🔴"
+                        color = "red"
                     else:
-                        self.title = "⚾🟡"
+                        color = "yellow"
+                    self._set_status_title(f"{away_score}-{home_score} F", color)
                 else:
-                    self.title = "⚾"
+                    self._set_status_title("⚾")
         else:
-            self.title = "⚾"
+            self._set_status_title("⚾")
 
     def update_top_section(self) -> None:
         """Update the five context-aware lines at the top of the menu."""

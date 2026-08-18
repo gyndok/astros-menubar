@@ -1,4 +1,9 @@
+import re
+
 from setuptools import setup
+
+with open("astros_menubar.py", encoding="utf-8") as f:
+    VERSION = re.search(r'APP_VERSION = "([^"]+)"', f.read()).group(1)
 
 APP = ["astros_menubar.py"]
 DATA_FILES = []
@@ -9,8 +14,8 @@ OPTIONS = {
         "CFBundleName": "Astros Menu Bar",
         "CFBundleDisplayName": "Astros Menu Bar",
         "CFBundleIdentifier": "com.gyndok.astros-menubar",
-        "CFBundleVersion": "1.1.0",
-        "CFBundleShortVersionString": "1.1.0",
+        "CFBundleVersion": VERSION,
+        "CFBundleShortVersionString": VERSION,
     },
     "packages": ["rumps", "requests", "yaml", "certifi"],
     "includes": [
