@@ -1232,17 +1232,22 @@ class AstrosMenuBarApp(rumps.App):
     }
 
     def _set_status_title(self, text: str, color: Optional[str] = None) -> None:
-        """Set the menu bar title, optionally colored green/red/yellow."""
+        """Set the menu bar title, optionally colored green/red/yellow.
+
+        Always sets a real NSAttributedString — clearing the attributed
+        title with nil makes AppKit render emoji in monochrome text style
+        (the ⚾ becomes a flat dark circle).
+        """
         self.title = text
         try:
             button = self._nsapp.nsstatusitem.button()
             if color is None:
-                button.setAttributedTitle_(None)
-                return
-            attrs = {
-                NSForegroundColorAttributeName: self._TITLE_COLORS[color](),
-                NSFontAttributeName: NSFont.menuBarFontOfSize_(0),
-            }
+                attrs = {}  # default attributes: colored emoji, standard font
+            else:
+                attrs = {
+                    NSForegroundColorAttributeName: self._TITLE_COLORS[color](),
+                    NSFontAttributeName: NSFont.menuBarFontOfSize_(0),
+                }
             astr = NSAttributedString.alloc().initWithString_attributes_(text, attrs)
             button.setAttributedTitle_(astr)
         except Exception as exc:
