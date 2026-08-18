@@ -113,6 +113,7 @@ DEFAULT_CONFIG = {
     "show_odds": True,
     "show_weather": True,
     "quick_links": [
+        {"name": "User's Guide", "url": f"https://github.com/{GITHUB_REPO}/blob/main/docs/USER_GUIDE.md"},
         {"name": "Astros.com", "url": "https://www.mlb.com/astros"},
         {"name": "MLB.tv", "url": "https://www.mlb.com/tv"},
         {"name": "Space City Home Network", "url": "https://www.spacecityhomenetwork.com"},
@@ -141,6 +142,14 @@ def load_config() -> dict:
         merged["notifications"] = DEFAULT_CONFIG["notifications"]
     if not isinstance(merged.get("quick_links"), list):
         merged["quick_links"] = DEFAULT_CONFIG["quick_links"]
+    # Configs saved before the User's Guide existed won't have its link —
+    # make sure it's always present at the top.
+    guide = DEFAULT_CONFIG["quick_links"][0]
+    if not any(
+        isinstance(link, dict) and link.get("url") == guide["url"]
+        for link in merged["quick_links"]
+    ):
+        merged["quick_links"].insert(0, guide)
     return merged
 
 
