@@ -1,5 +1,9 @@
 # ⚾ Astros Menu Bar
 
+[![Downloads](https://img.shields.io/github/downloads/gyndok/astros-menubar/total?label=downloads&color=EB6E1F)](https://github.com/gyndok/astros-menubar/releases)
+[![Latest release](https://img.shields.io/github/v/release/gyndok/astros-menubar?label=latest&color=002D62)](https://github.com/gyndok/astros-menubar/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
+
 Follow the Houston Astros all season from your macOS menu bar. Live scores,
 schedule, lineups, standings, magic numbers, Vegas odds, ballpark weather,
 and a league-wide scoreboard — one click away, all day.
