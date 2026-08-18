@@ -40,6 +40,8 @@ The menu bar icon tells you the game state at a glance:
 Polling is adaptive: 60s during games and the half hour before first pitch,
 15–30 minutes otherwise, so it's easy on the APIs and your battery.
 
+📖 **[Full User's Guide](docs/USER_GUIDE.md)** — every menu and setting explained.
+
 ## Install
 
 ### Option 1: Download the app (Apple Silicon)
