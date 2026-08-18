@@ -975,7 +975,13 @@ class AstrosMenuBarApp(rumps.App):
         self.schedule_data = read_cache("schedule").get("games", [])
         self.league_scores: list = read_cache("league_scores").get("games", [])
         self.standings_data = read_cache("standings").get("records", [])
-        self.odds_data = read_cache("odds")
+        odds_cache = read_cache("odds")
+        if "event" in odds_cache:
+            self.odds_data = odds_cache.get("event") or {}
+            self._odds_fetched: str = odds_cache.get("fetched", "")
+        else:  # legacy cache format: the raw event dict
+            self.odds_data = odds_cache
+            self._odds_fetched = ""
         self.weather_data = read_cache("weather")
         self.team_stats = read_cache("team_stats")
 
@@ -1929,11 +1935,7 @@ class AstrosMenuBarApp(rumps.App):
             write_cache("team_stats", self.team_stats)
 
             self._refresh_pitcher_stats()
-
-            api_key = self.config.get("odds_api_key", "")
-            if api_key:
-                self.odds_data = fetch_odds(api_key)
-                write_cache("odds", self.odds_data)
+            self._refresh_odds()
 
             game = self.game_state.get("game")
             if game:
@@ -1948,6 +1950,25 @@ class AstrosMenuBarApp(rumps.App):
             logging.exception("refresh_all error: %s", exc)
         finally:
             self._update_all_menus()
+
+    def _refresh_odds(self) -> None:
+        """Fetch odds only when the cache is stale (>2h).
+
+        The Odds API free tier is 500 requests/month — without this guard
+        every app restart burns a request via the startup full refresh.
+        """
+        api_key = self.config.get("odds_api_key", "")
+        if not api_key:
+            return
+        try:
+            fetched = dt.datetime.fromisoformat(self._odds_fetched)
+            if now_local() - fetched < dt.timedelta(hours=2):
+                return
+        except (TypeError, ValueError):
+            pass  # no/invalid timestamp — fetch
+        self.odds_data = fetch_odds(api_key)
+        self._odds_fetched = now_local().isoformat()
+        write_cache("odds", {"event": self.odds_data, "fetched": self._odds_fetched})
 
     def _check_lineup(self, game_pk: int) -> None:
         """Fetch the lineup; notify the first time it appears for this game."""
@@ -2124,11 +2145,7 @@ class AstrosMenuBarApp(rumps.App):
             write_cache("team_stats", self.team_stats)
 
             self._refresh_pitcher_stats()
-
-            api_key = self.config.get("odds_api_key", "")
-            if api_key:
-                self.odds_data = fetch_odds(api_key)
-                write_cache("odds", self.odds_data)
+            self._refresh_odds()
 
             game = self.game_state.get("game")
             if game:
