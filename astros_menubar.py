@@ -31,7 +31,7 @@ from AppKit import (
 )
 
 APP_NAME = "Astros Menu Bar"
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
 GITHUB_REPO = "gyndok/astros-menubar"
 CONFIG_DIR = Path.home() / ".config" / "astros-menubar"
 CONFIG_PATH = CONFIG_DIR / "config.yaml"
@@ -1150,7 +1150,13 @@ class AstrosMenuBarApp(rumps.App):
             webbrowser.open(url)
 
     def check_updates(self, _sender: Any) -> None:
-        """Compare APP_VERSION with the latest GitHub release; offer download."""
+        """Compare APP_VERSION with the latest GitHub release.
+
+        Uses notifications instead of modal dialogs — modal alerts can't
+        come to the front from a menu-bar-only (LSUIElement) app and would
+        freeze the app in an invisible modal loop. If an update exists,
+        the release page opens in the browser directly.
+        """
         try:
             resp = requests.get(
                 f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
@@ -1164,7 +1170,9 @@ class AstrosMenuBarApp(rumps.App):
             )
         except Exception as exc:
             logging.exception("check_updates failed: %s", exc)
-            rumps.alert("Check for Updates", "Couldn't reach GitHub — try again later.")
+            self.send_notification(
+                "Check for Updates", "Couldn't reach GitHub — try again later."
+            )
             return
 
         def as_tuple(version: str) -> tuple:
@@ -1174,17 +1182,15 @@ class AstrosMenuBarApp(rumps.App):
                 return (0,)
 
         if latest and as_tuple(latest) > as_tuple(APP_VERSION):
-            clicked = rumps.alert(
+            self.send_notification(
                 "Update Available",
-                f"Version {latest} is out (you have {APP_VERSION}).\n\n"
-                "Open the download page?",
-                ok="Download",
-                cancel="Later",
+                f"Version {latest} is out (you have {APP_VERSION}) — opening the download page…",
             )
-            if clicked == 1:
-                webbrowser.open(url)
+            webbrowser.open(url)
         else:
-            rumps.alert("Up to Date", f"You're on the latest version ({APP_VERSION}). ⚾")
+            self.send_notification(
+                "Up to Date", f"You're on the latest version ({APP_VERSION}). ⚾"
+            )
 
     def edit_config(self, _sender: Any) -> None:
         """Open CONFIG_PATH with the default editor."""
