@@ -31,7 +31,7 @@ from AppKit import (
 )
 
 APP_NAME = "Astros Menu Bar"
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.2.2"
 GITHUB_REPO = "gyndok/astros-menubar"
 CONFIG_DIR = Path.home() / ".config" / "astros-menubar"
 CONFIG_PATH = CONFIG_DIR / "config.yaml"
