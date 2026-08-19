@@ -1224,6 +1224,16 @@ class AstrosMenuBarApp(rumps.App):
         """Create an info-only menu item that appears enabled."""
         return rumps.MenuItem(title, callback=self._noop)
 
+    @staticmethod
+    def _apply_lines(items: List[rumps.MenuItem], lines: List[str]) -> None:
+        """Set titles on fixed menu rows, hiding unused '—' placeholders."""
+        for item, text in zip(items, lines):
+            item.title = text
+            try:
+                item._menuitem.setHidden_(text == "—")
+            except Exception:
+                pass
+
     def copy_game_text(self, _sender: Any) -> None:
         """Generate a witty game text and copy to clipboard."""
         text = generate_game_text(self.game_state, self.live_data, self.schedule_data)
@@ -1411,8 +1421,7 @@ class AstrosMenuBarApp(rumps.App):
             lines[4] = "—"
 
         items = [self.top_line_1, self.top_line_2, self.top_line_3, self.top_line_4, self.top_line_5]
-        for item, text in zip(items, lines):
-            item.title = text
+        self._apply_lines(items, lines)
 
     # ------------------------------------------------------------------
     # Submenu updates
@@ -1517,8 +1526,7 @@ class AstrosMenuBarApp(rumps.App):
             self.tg_line_1, self.tg_line_2, self.tg_line_3,
             self.tg_line_4, self.tg_line_5, self.tg_line_6,
         ]
-        for item, text in zip(tg_items, lines):
-            item.title = text
+        self._apply_lines(tg_items, lines)
 
     def update_schedule_menu(self) -> None:
         """Populate the Schedule submenu with next 10 games."""
