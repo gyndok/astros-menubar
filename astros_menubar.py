@@ -812,6 +812,31 @@ def parse_live_data(feed: dict) -> dict:
     }
 
 
+def parse_scoring_plays(feed: dict, astros_side: str) -> list:
+    """Extract scoring plays from the live feed, in chronological order."""
+    plays = feed.get("liveData", {}).get("plays", {})
+    all_plays = plays.get("allPlays", [])
+    result = []
+    for idx in plays.get("scoringPlays", []):
+        try:
+            play = all_plays[idx]
+        except (IndexError, TypeError):
+            continue
+        about = play.get("about", {})
+        res = play.get("result", {})
+        half = about.get("halfInning", "top")
+        batting_side = "away" if half == "top" else "home"
+        result.append({
+            "inning": about.get("inning", 0),
+            "top": half == "top",
+            "away_score": res.get("awayScore", 0),
+            "home_score": res.get("homeScore", 0),
+            "description": res.get("description", "").strip(),
+            "astros": batting_side == astros_side,
+        })
+    return result
+
+
 def format_odds_price(price: int) -> str:
     """Format American odds with +/- prefix."""
     if price >= 0:
@@ -959,6 +984,8 @@ class AstrosMenuBarApp(rumps.App):
         self.game_state: dict = {"state": "off", "game": None, "game_pk": None}
         self.live_data: dict = {}
         self.lineup_data: list = []
+        self.scoring_plays: list = []
+        self._plays_game_pk: Optional[int] = None
         self.standings_data: list = []
         self.odds_data: dict = {}
         self.weather_data: dict = {}
@@ -1018,6 +1045,10 @@ class AstrosMenuBarApp(rumps.App):
             self.tg_line_1, self.tg_line_2, self.tg_line_3,
             self.tg_line_4, self.tg_line_5, self.tg_line_6,
         ])
+
+        # Scoring Plays submenu
+        self.plays_menu = rumps.MenuItem("📝 Scoring Plays")
+        self.plays_menu.update([rumps.MenuItem("Loading...")])
 
         # Schedule submenu (placeholder seeds _menu so .clear() works later)
         self.schedule_menu = rumps.MenuItem("📅 Schedule")
@@ -1106,6 +1137,7 @@ class AstrosMenuBarApp(rumps.App):
             self.top_line_5,
             None,  # separator
             self.todays_game_menu,
+            self.plays_menu,
             self.schedule_menu,
             self.lineup_menu,
             self.rotation_menu,
@@ -1528,6 +1560,34 @@ class AstrosMenuBarApp(rumps.App):
         ]
         self._apply_lines(tg_items, lines)
 
+    def update_plays_menu(self) -> None:
+        """List the game's scoring plays in chronological order."""
+        self.plays_menu.clear()
+        state = self.game_state.get("state", "off")
+        if state == "off":
+            self.plays_menu.update([self._item("No game today")])
+            return
+        if state == "pre":
+            self.plays_menu.update([self._item("Game hasn't started")])
+            return
+        if not self.scoring_plays:
+            self.plays_menu.update([self._item("No runs yet")])
+            return
+        rows: List[Any] = []
+        seen: set = set()
+        for play in self.scoring_plays:
+            arrow = "▲" if play["top"] else "▼"
+            star = "⭐ " if play["astros"] else ""
+            desc = play["description"]
+            if len(desc) > 95:
+                desc = desc[:94].rstrip() + "…"
+            title = f"{star}{arrow}{play['inning']}  {play['away_score']}-{play['home_score']}  {desc}"
+            while title in seen:  # rumps menus key by title
+                title += "\u2009"
+            seen.add(title)
+            rows.append(self._item(title))
+        self.plays_menu.update(rows)
+
     def update_schedule_menu(self) -> None:
         """Populate the Schedule submenu with next 10 games."""
         today = now_local().strftime("%Y-%m-%d")
@@ -1889,6 +1949,7 @@ class AstrosMenuBarApp(rumps.App):
         self.update_title()
         self.update_top_section()
         self.update_todays_game_menu()
+        self.update_plays_menu()
         self.update_schedule_menu()
         self.update_lineup_menu()
         self.update_rotation_menu()
@@ -1923,9 +1984,16 @@ class AstrosMenuBarApp(rumps.App):
             else:
                 self.final_revert_time = None
 
-            if state == "live" and game_pk:
+            if state in ("live", "final") and game_pk:
                 feed = fetch_live_game(game_pk)
-                self.live_data = parse_live_data(feed)
+                if state == "live":
+                    self.live_data = parse_live_data(feed)
+                game = self.game_state.get("game")
+                if game:
+                    self.scoring_plays = parse_scoring_plays(feed, get_astros_side(game))
+                    self._plays_game_pk = game_pk
+            elif state != "final":
+                self.scoring_plays = []
             if game_pk:
                 # Full refresh loads the lineup silently (no notification) —
                 # a lineup that's already up when the app starts isn't news.
@@ -2103,6 +2171,14 @@ class AstrosMenuBarApp(rumps.App):
                 if game_pk and minutes_until is not None and minutes_until <= 240:
                     self._check_lineup(game_pk)
 
+            # Final: grab the completed game's scoring plays once
+            if new_state == "final" and game_pk and game and self._plays_game_pk != game_pk:
+                feed = fetch_live_game(game_pk)
+                self.scoring_plays = parse_scoring_plays(feed, get_astros_side(game))
+                self._plays_game_pk = game_pk
+            if new_state in ("off", "pre"):
+                self.scoring_plays = []
+
             # If live: fetch live data, check scoring plays, update lineup
             if new_state == "live" and game_pk:
                 # New game (or game 2 of a doubleheader): reset score tracking
@@ -2111,6 +2187,9 @@ class AstrosMenuBarApp(rumps.App):
                     self.previous_astros_score = None
                 feed = fetch_live_game(game_pk)
                 self.live_data = parse_live_data(feed)
+                if game:
+                    self.scoring_plays = parse_scoring_plays(feed, get_astros_side(game))
+                    self._plays_game_pk = game_pk
 
                 # Scoring plays notification
                 if game:
