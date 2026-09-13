@@ -27,7 +27,11 @@ know how the game is going:
 
 - **Live game tracking** — score, inning, count, outs, runners, current
   pitcher/batter, refreshed every 60 seconds during games
-- **⚾ Today's Game** — matchup, probable starters, records, venue, TV broadcast
+- **⚾ Today's Game** — matchup, probable starters, records, venue, TV
+  broadcast, and a classic inning-by-inning **box score** with R/H/E that
+  fills in live and covers the last game after the final
+- **📝 Scoring Plays** — every run scored, in order, with MLB's official
+  play descriptions (Astros plays starred)
 - **📅 Schedule** — next 10 games with probable pitchers and broadcasts
 - **👥 Lineup** — batting order 1–9 once it's posted
 - **⚾ Starting Rotation** — upcoming probables with W-L and ERA

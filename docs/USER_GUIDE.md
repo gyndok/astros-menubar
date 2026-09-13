@@ -43,6 +43,27 @@ The same information as the top section, but fuller — venue, records for both
 teams, and during a live game the complete situation (runners, count, outs,
 who's pitching, who's batting).
 
+During and after a game it also shows a classic **box score** — innings with
+R/H/E totals, filling in live as each half-inning ends:
+
+```
+      1  2  3  4  5  6  7  8  9    R  H  E
+HOU   1  0  0  0  0  1  0  0  0    2  5  0
+TB    0  0  0  0  2  0  1  0  X    3  7  0
+```
+
+The `X` means the home team didn't need its last at-bat; extra innings extend
+the grid. Like the menu bar score, it sticks around for 30 minutes after the
+final.
+
+## 📝 Scoring Plays
+
+Every run of the game in chronological order — half-inning, the score after
+the play, and MLB's official play description. **Astros plays are starred ⭐**
+so the good news is easy to scan. Updates live during the game and stays
+available for 30 minutes after the final; shows "No runs yet" early and
+"Game hasn't started" before first pitch.
+
 ## 📅 Schedule
 
 The next 10 games: date, opponent, home/away (`vs` = home, `@` = away), and
