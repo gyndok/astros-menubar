@@ -837,6 +837,74 @@ def parse_scoring_plays(feed: dict, astros_side: str) -> list:
     return result
 
 
+def parse_line_score(feed: dict) -> dict:
+    """Extract the inning-by-inning line score from the live feed."""
+    ls = feed.get("liveData", {}).get("linescore", {})
+    innings = ls.get("innings", [])
+    if not innings:
+        return {}
+    gd_teams = feed.get("gameData", {}).get("teams", {})
+    totals = ls.get("teams", {})
+
+    def tot(side: str) -> dict:
+        t = totals.get(side, {})
+        return {
+            "runs": t.get("runs", 0),
+            "hits": t.get("hits", 0),
+            "errors": t.get("errors", 0),
+        }
+
+    return {
+        "away_abbr": gd_teams.get("away", {}).get("abbreviation", "AWY"),
+        "home_abbr": gd_teams.get("home", {}).get("abbreviation", "HME"),
+        "innings": [
+            {
+                "num": inn.get("num", n + 1),
+                "away": inn.get("away", {}).get("runs"),
+                "home": inn.get("home", {}).get("runs"),
+            }
+            for n, inn in enumerate(innings)
+        ],
+        "away": tot("away"),
+        "home": tot("home"),
+    }
+
+
+def format_line_score(line_score: dict, is_final: bool) -> List[str]:
+    """Render a line score as three monospace-aligned rows:
+
+           1  2  3  4  5  6  7  8  9    R  H  E
+    HOU    1  0  0  0  0  1  0  0  0    2  5  0
+    TB     0  0  0  0  2  0  1  0  X    3  7  0
+    """
+    innings = line_score["innings"]
+    by_num = {inn["num"]: inn for inn in innings}
+    last_num = innings[-1]["num"]
+    n_shown = max(9, last_num)
+
+    def cell(num: int, side: str) -> str:
+        inn = by_num.get(num)
+        if inn is None:
+            return " "
+        runs = inn[side]
+        if runs is None:
+            # Home never batted in the last inning of a final = classic X
+            if side == "home" and is_final and num == last_num:
+                return "X"
+            return " "
+        return str(runs)
+
+    header = "     " + " ".join(f"{n:>2}" for n in range(1, n_shown + 1)) + "    R  H  E"
+    rows = [header]
+    for side, abbr in (("away", line_score["away_abbr"]), ("home", line_score["home_abbr"])):
+        t = line_score[side]
+        cells = " ".join(f"{cell(n, side):>2}" for n in range(1, n_shown + 1))
+        rows.append(
+            f"{abbr:<5}{cells}   {t['runs']:>2} {t['hits']:>2} {t['errors']:>2}"
+        )
+    return rows
+
+
 def format_odds_price(price: int) -> str:
     """Format American odds with +/- prefix."""
     if price >= 0:
@@ -986,6 +1054,7 @@ class AstrosMenuBarApp(rumps.App):
         self.lineup_data: list = []
         self.scoring_plays: list = []
         self._plays_game_pk: Optional[int] = None
+        self.line_score: dict = {}
         self.standings_data: list = []
         self.odds_data: dict = {}
         self.weather_data: dict = {}
@@ -1041,9 +1110,14 @@ class AstrosMenuBarApp(rumps.App):
         self.tg_line_4 = rumps.MenuItem("—", callback=self._noop)
         self.tg_line_5 = rumps.MenuItem("—", callback=self._noop)
         self.tg_line_6 = rumps.MenuItem("—", callback=self._noop)
+        # Line score rows (rendered in a monospaced font)
+        self.tg_box_1 = rumps.MenuItem("—", callback=self._noop)
+        self.tg_box_2 = rumps.MenuItem("—", callback=self._noop)
+        self.tg_box_3 = rumps.MenuItem("—", callback=self._noop)
         self.todays_game_menu.update([
             self.tg_line_1, self.tg_line_2, self.tg_line_3,
             self.tg_line_4, self.tg_line_5, self.tg_line_6,
+            self.tg_box_1, self.tg_box_2, self.tg_box_3,
         ])
 
         # Scoring Plays submenu
@@ -1255,6 +1329,19 @@ class AstrosMenuBarApp(rumps.App):
     def _item(self, title: str) -> rumps.MenuItem:
         """Create an info-only menu item that appears enabled."""
         return rumps.MenuItem(title, callback=self._noop)
+
+    @staticmethod
+    def _set_mono_title(item: rumps.MenuItem, text: str) -> None:
+        """Set a menu row in a monospaced font so columns line up."""
+        item.title = text
+        try:
+            font = NSFont.monospacedSystemFontOfSize_weight_(11.0, 0.0)
+            astr = NSAttributedString.alloc().initWithString_attributes_(
+                text, {NSFontAttributeName: font}
+            )
+            item._menuitem.setAttributedTitle_(astr)
+        except Exception as exc:
+            logging.debug("mono title unavailable: %s", exc)
 
     @staticmethod
     def _apply_lines(items: List[rumps.MenuItem], lines: List[str]) -> None:
@@ -1559,6 +1646,23 @@ class AstrosMenuBarApp(rumps.App):
             self.tg_line_4, self.tg_line_5, self.tg_line_6,
         ]
         self._apply_lines(tg_items, lines)
+
+        # Line score rows (live and final only)
+        box_items = [self.tg_box_1, self.tg_box_2, self.tg_box_3]
+        if state in ("live", "final") and self.line_score:
+            box_rows = format_line_score(self.line_score, state == "final")
+            for item, text in zip(box_items, box_rows):
+                self._set_mono_title(item, text)
+                try:
+                    item._menuitem.setHidden_(False)
+                except Exception:
+                    pass
+        else:
+            for item in box_items:
+                try:
+                    item._menuitem.setHidden_(True)
+                except Exception:
+                    pass
 
     def update_plays_menu(self) -> None:
         """List the game's scoring plays in chronological order."""
@@ -1991,9 +2095,11 @@ class AstrosMenuBarApp(rumps.App):
                 game = self.game_state.get("game")
                 if game:
                     self.scoring_plays = parse_scoring_plays(feed, get_astros_side(game))
+                    self.line_score = parse_line_score(feed)
                     self._plays_game_pk = game_pk
             elif state != "final":
                 self.scoring_plays = []
+                self.line_score = {}
             if game_pk:
                 # Full refresh loads the lineup silently (no notification) —
                 # a lineup that's already up when the app starts isn't news.
@@ -2175,9 +2281,11 @@ class AstrosMenuBarApp(rumps.App):
             if new_state == "final" and game_pk and game and self._plays_game_pk != game_pk:
                 feed = fetch_live_game(game_pk)
                 self.scoring_plays = parse_scoring_plays(feed, get_astros_side(game))
+                self.line_score = parse_line_score(feed)
                 self._plays_game_pk = game_pk
             if new_state in ("off", "pre"):
                 self.scoring_plays = []
+                self.line_score = {}
 
             # If live: fetch live data, check scoring plays, update lineup
             if new_state == "live" and game_pk:
@@ -2189,6 +2297,7 @@ class AstrosMenuBarApp(rumps.App):
                 self.live_data = parse_live_data(feed)
                 if game:
                     self.scoring_plays = parse_scoring_plays(feed, get_astros_side(game))
+                    self.line_score = parse_line_score(feed)
                     self._plays_game_pk = game_pk
 
                 # Scoring plays notification
