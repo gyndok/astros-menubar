@@ -2,7 +2,7 @@ import re
 
 from setuptools import setup
 
-with open("astros_menubar.py", encoding="utf-8") as f:
+with open("sportsbar/config.py", encoding="utf-8") as f:
     VERSION = re.search(r'APP_VERSION = "([^"]+)"', f.read()).group(1)
 
 APP = ["astros_menubar.py"]
@@ -17,7 +17,7 @@ OPTIONS = {
         "CFBundleVersion": VERSION,
         "CFBundleShortVersionString": VERSION,
     },
-    "packages": ["rumps", "requests", "yaml", "certifi"],
+    "packages": ["sportsbar", "rumps", "requests", "yaml", "certifi"],
     "includes": [
         "rumps",
         "requests",

@@ -1,0 +1,286 @@
+{
+ "dates": [
+  {
+   "date": "2026-09-24",
+   "games": [
+    {
+     "gamePk": 800001,
+     "gameDate": "2026-09-24T23:10:00Z",
+     "officialDate": "2026-09-24",
+     "status": {
+      "abstractGameState": "Live",
+      "detailedState": "In Progress"
+     },
+     "teams": {
+      "away": {
+       "team": {
+        "id": 117,
+        "name": "Houston Astros",
+        "abbreviation": "HOU"
+       },
+       "leagueRecord": {
+        "wins": 0,
+        "losses": 0,
+        "pct": ""
+       },
+       "score": 3
+      },
+      "home": {
+       "team": {
+        "id": 136,
+        "name": "Seattle Mariners",
+        "abbreviation": "SEA"
+       },
+       "leagueRecord": {
+        "wins": 0,
+        "losses": 0,
+        "pct": ""
+       },
+       "score": 2
+      }
+     },
+     "linescore": {
+      "currentInning": 7,
+      "isTopInning": false,
+      "innings": [
+       {
+        "num": 1
+       },
+       {
+        "num": 2
+       },
+       {
+        "num": 3
+       },
+       {
+        "num": 4
+       },
+       {
+        "num": 5
+       },
+       {
+        "num": 6
+       },
+       {
+        "num": 7
+       }
+      ]
+     }
+    },
+    {
+     "gamePk": 800010,
+     "gameDate": "2026-09-24T17:05:00Z",
+     "officialDate": "2026-09-24",
+     "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Final"
+     },
+     "teams": {
+      "away": {
+       "team": {
+        "id": 147,
+        "name": "New York Yankees",
+        "abbreviation": "NYY"
+       },
+       "leagueRecord": {
+        "wins": 0,
+        "losses": 0,
+        "pct": ""
+       },
+       "score": 5
+      },
+      "home": {
+       "team": {
+        "id": 111,
+        "name": "Boston Red Sox",
+        "abbreviation": "BOS"
+       },
+       "leagueRecord": {
+        "wins": 0,
+        "losses": 0,
+        "pct": ""
+       },
+       "score": 4
+      }
+     },
+     "linescore": {
+      "currentInning": 10,
+      "isTopInning": false,
+      "innings": [
+       {
+        "num": 1
+       },
+       {
+        "num": 2
+       },
+       {
+        "num": 3
+       },
+       {
+        "num": 4
+       },
+       {
+        "num": 5
+       },
+       {
+        "num": 6
+       },
+       {
+        "num": 7
+       },
+       {
+        "num": 8
+       },
+       {
+        "num": 9
+       },
+       {
+        "num": 10
+       }
+      ]
+     }
+    },
+    {
+     "gamePk": 800011,
+     "gameDate": "2026-09-24T18:20:00Z",
+     "officialDate": "2026-09-24",
+     "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Final"
+     },
+     "teams": {
+      "away": {
+       "team": {
+        "id": 112,
+        "name": "Chicago Cubs",
+        "abbreviation": "CHC"
+       },
+       "leagueRecord": {
+        "wins": 0,
+        "losses": 0,
+        "pct": ""
+       },
+       "score": 2
+      },
+      "home": {
+       "team": {
+        "id": 138,
+        "name": "St. Louis Cardinals",
+        "abbreviation": "STL"
+       },
+       "leagueRecord": {
+        "wins": 0,
+        "losses": 0,
+        "pct": ""
+       },
+       "score": 7
+      }
+     },
+     "linescore": {
+      "currentInning": 9,
+      "isTopInning": true,
+      "innings": [
+       {
+        "num": 1
+       },
+       {
+        "num": 2
+       },
+       {
+        "num": 3
+       },
+       {
+        "num": 4
+       },
+       {
+        "num": 5
+       },
+       {
+        "num": 6
+       },
+       {
+        "num": 7
+       },
+       {
+        "num": 8
+       },
+       {
+        "num": 9
+       }
+      ]
+     }
+    },
+    {
+     "gamePk": 800012,
+     "gameDate": "2026-09-25T02:10:00Z",
+     "officialDate": "2026-09-24",
+     "status": {
+      "abstractGameState": "Preview",
+      "detailedState": "Scheduled"
+     },
+     "teams": {
+      "away": {
+       "team": {
+        "id": 135,
+        "name": "San Diego Padres",
+        "abbreviation": "SD"
+       },
+       "leagueRecord": {
+        "wins": 0,
+        "losses": 0,
+        "pct": ""
+       }
+      },
+      "home": {
+       "team": {
+        "id": 119,
+        "name": "Los Angeles Dodgers",
+        "abbreviation": "LAD"
+       },
+       "leagueRecord": {
+        "wins": 0,
+        "losses": 0,
+        "pct": ""
+       }
+      }
+     }
+    },
+    {
+     "gamePk": 800013,
+     "gameDate": "2026-09-24T23:05:00Z",
+     "officialDate": "2026-09-24",
+     "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Postponed"
+     },
+     "teams": {
+      "away": {
+       "team": {
+        "id": 140,
+        "name": "Texas Rangers",
+        "abbreviation": "TEX"
+       },
+       "leagueRecord": {
+        "wins": 0,
+        "losses": 0,
+        "pct": ""
+       }
+      },
+      "home": {
+       "team": {
+        "id": 144,
+        "name": "Los Angeles Angels",
+        "abbreviation": "LAA"
+       },
+       "leagueRecord": {
+        "wins": 0,
+        "losses": 0,
+        "pct": ""
+       }
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

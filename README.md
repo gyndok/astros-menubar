@@ -95,17 +95,41 @@ Python** and make sure they're allowed.
 
 ## How it works
 
-A single Python file built on [rumps](https://github.com/jaredks/rumps).
+A small Python app built on [rumps](https://github.com/jaredks/rumps).
 Data comes from the free, keyless [MLB Stats API](https://statsapi.mlb.com)
 (scores, schedule, standings, lineups, stats),
 [Open-Meteo](https://open-meteo.com) (weather), and optionally
 [The Odds API](https://the-odds-api.com) (betting lines). Everything is
 cached in `~/.config/astros-menubar/` so menus populate instantly on launch.
 
-Run it in the foreground for development:
+All network requests run on a background thread, so the menu never
+freezes waiting on a slow API.
+
+### Development
+
+`astros_menubar.py` is the entry point; the code lives in `sportsbar/`:
+
+| Module | What's in it |
+|--------|--------------|
+| `app.py` | The menu bar app — menus, timers, notifications |
+| `worker.py` | Background thread that runs all network I/O |
+| `mlb.py` | MLB Stats API fetching, parsing, and formatting |
+| `odds.py` / `weather.py` | The Odds API and Open-Meteo |
+| `gametext.py` | 💬 Game Text messages |
+| `config.py` | Config file, cache, logging |
+| `system.py` | Login item (LaunchAgent) and single-instance handling |
+
+Run it in the foreground:
 
 ```bash
 python3 astros_menubar.py
+```
+
+Run the tests (they don't need macOS — AppKit and rumps are stubbed out):
+
+```bash
+pip install -r requirements-dev.txt
+python3 -m pytest
 ```
 
 Not affiliated with MLB or the Houston Astros. Go Stros. 🚀

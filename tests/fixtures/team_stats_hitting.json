@@ -1,0 +1,18 @@
+{
+ "stats": [
+  {
+   "splits": [
+    {
+     "stat": {
+      "wins": 88,
+      "losses": 67,
+      "avg": ".254",
+      "homeRuns": 190,
+      "runs": 700,
+      "ops": ".742"
+     }
+    }
+   ]
+  }
+ ]
+}
