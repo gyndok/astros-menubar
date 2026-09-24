@@ -1,0 +1,72 @@
+{
+ "sports": [
+  {
+   "leagues": [
+    {
+     "teams": [
+      {
+       "team": {
+        "id": "25",
+        "abbreviation": "DAL",
+        "displayName": "Dallas Stars",
+        "shortDisplayName": "Stars",
+        "location": "Dallas",
+        "name": "Stars"
+       }
+      },
+      {
+       "team": {
+        "id": "4",
+        "abbreviation": "CHI",
+        "displayName": "Chicago Blackhawks",
+        "shortDisplayName": "Blackhawks",
+        "location": "Chicago",
+        "name": "Blackhawks"
+       }
+      },
+      {
+       "team": {
+        "id": "6",
+        "abbreviation": "EDM",
+        "displayName": "Edmonton Oilers",
+        "shortDisplayName": "Oilers",
+        "location": "Edmonton",
+        "name": "Oilers"
+       }
+      },
+      {
+       "team": {
+        "id": "37",
+        "abbreviation": "VGK",
+        "displayName": "Vegas Golden Knights",
+        "shortDisplayName": "Golden Knights",
+        "location": "Vegas",
+        "name": "Golden Knights"
+       }
+      },
+      {
+       "team": {
+        "id": "13",
+        "abbreviation": "NYR",
+        "displayName": "New York Rangers",
+        "shortDisplayName": "Rangers",
+        "location": "New York",
+        "name": "Rangers"
+       }
+      },
+      {
+       "team": {
+        "id": "1",
+        "abbreviation": "BOS",
+        "displayName": "Boston Bruins",
+        "shortDisplayName": "Bruins",
+        "location": "Boston",
+        "name": "Bruins"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

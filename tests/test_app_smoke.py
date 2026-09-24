@@ -580,3 +580,37 @@ def test_espn_cache_fills_menus_before_first_refresh(harness):
     relaunched = harness.make_app(favorites=NFL_ONLY)
     relaunched.update_espn_menus()
     assert relaunched.espn_menus[0].titles()[0] == "HOU 21 — JAX 17   Q3 4:12"
+
+
+def test_nba_and_nhl_favorites(harness):
+    app = harness.make_app(favorites=[
+        {"league": "nba", "team": "Rockets"}, {"league": "nhl", "team": "Stars"},
+    ])
+    harness.tick(app)
+    assert mlb_calls(harness) == []
+    assert app.title == "🏀 98-96 Q4"  # Rockets listed first, both live
+    assert app.status_button.attributed.attrs["color"] == "green"
+    assert [r.title for r in app.espn_rows if not r.hidden] == [
+        "🏀 HOU 98 — LAL 96   Q4 4:32",
+        "🏒 DAL 2 — CHI 1   P2 8:31",
+    ]
+    rockets, stars = app.espn_menus[:2]
+    assert rockets.title == "🏀 Rockets  — Live"
+    assert stars.title == "🏒 Stars  — Live"
+    assert "🔗 Stars on ESPN" in stars.titles()
+    assert not app.espn_score_menus["nba"].hidden and not app.espn_score_menus["nhl"].hidden
+    assert app.espn_score_menus["nfl"].hidden
+    nhl = app.espn_score_menus["nhl"].titles()
+    assert "   ⭐ DAL 2 — CHI 1   P2 8:31" in nhl
+    assert "   NYR 0 — BOS 0   End P1" in nhl
+    assert "   EDM 3 — VGK 2   F/SO" in nhl
+    assert app.primary_timer.interval == 60
+
+
+def test_daily_league_with_no_games(harness):
+    harness.api.overrides["/hockey/nhl/scoreboard"] = {"events": []}
+    app = harness.make_app(favorites=[{"league": "nhl", "team": "DAL"}])
+    harness.tick(app)
+    assert app.espn_score_menus["nhl"].titles() == ["No NHL games today"]
+    assert app.title == "🏒"
+    assert app.espn_menus[0].titles()[0] == "No Stars game scheduled"

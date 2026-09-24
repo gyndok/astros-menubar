@@ -1,0 +1,331 @@
+{
+ "leagues": [
+  {
+   "abbreviation": "NHL"
+  }
+ ],
+ "events": [
+  {
+   "id": "401820001",
+   "date": "2026-09-25T00:30Z",
+   "name": "",
+   "week": {
+    "number": 4
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401820001",
+     "date": "2026-09-25T00:30Z",
+     "competitors": [
+      {
+       "id": "4",
+       "homeAway": "home",
+       "team": {
+        "id": "4",
+        "abbreviation": "CHI",
+        "displayName": "Chicago Blackhawks",
+        "shortDisplayName": "Blackhawks",
+        "location": "Chicago",
+        "name": "Blackhawks"
+       },
+       "score": "1",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "0-1-0"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 1.0
+        },
+        {
+         "value": 0.0
+        }
+       ]
+      },
+      {
+       "id": "25",
+       "homeAway": "away",
+       "team": {
+        "id": "25",
+        "abbreviation": "DAL",
+        "displayName": "Dallas Stars",
+        "shortDisplayName": "Stars",
+        "location": "Dallas",
+        "name": "Stars"
+       },
+       "score": "2",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "1-0-0"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 1.0
+        },
+        {
+         "value": 1.0
+        }
+       ]
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "8:31",
+      "period": 2,
+      "type": {
+       "name": "STATUS_IN_PROGRESS",
+       "state": "in",
+       "completed": false,
+       "detail": "8:31 - 2nd",
+       "shortDetail": "8:31 - 2nd"
+      }
+     },
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "ESPN+"
+       ]
+      }
+     ]
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "8:31",
+    "period": 2,
+    "type": {
+     "name": "STATUS_IN_PROGRESS",
+     "state": "in",
+     "completed": false,
+     "detail": "8:31 - 2nd",
+     "shortDetail": "8:31 - 2nd"
+    }
+   }
+  },
+  {
+   "id": "401820002",
+   "date": "2026-09-24T23:00Z",
+   "name": "",
+   "week": {
+    "number": 4
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401820002",
+     "date": "2026-09-24T23:00Z",
+     "competitors": [
+      {
+       "id": "37",
+       "homeAway": "home",
+       "team": {
+        "id": "37",
+        "abbreviation": "VGK",
+        "displayName": "Vegas Golden Knights",
+        "shortDisplayName": "Golden Knights",
+        "location": "Vegas",
+        "name": "Golden Knights"
+       },
+       "score": "2",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "0-0-1"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 0.0
+        },
+        {
+         "value": 1.0
+        },
+        {
+         "value": 1.0
+        },
+        {
+         "value": 0.0
+        },
+        {
+         "value": 0.0
+        }
+       ],
+       "winner": false
+      },
+      {
+       "id": "6",
+       "homeAway": "away",
+       "team": {
+        "id": "6",
+        "abbreviation": "EDM",
+        "displayName": "Edmonton Oilers",
+        "shortDisplayName": "Oilers",
+        "location": "Edmonton",
+        "name": "Oilers"
+       },
+       "score": "3",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "1-0-0"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 1.0
+        },
+        {
+         "value": 0.0
+        },
+        {
+         "value": 1.0
+        },
+        {
+         "value": 0.0
+        },
+        {
+         "value": 1.0
+        }
+       ],
+       "winner": true
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 5,
+      "type": {
+       "name": "STATUS_FINAL",
+       "state": "post",
+       "completed": true,
+       "detail": "Final/SO",
+       "shortDetail": "Final/SO"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 5,
+    "type": {
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "detail": "Final/SO",
+     "shortDetail": "Final/SO"
+    }
+   }
+  },
+  {
+   "id": "401820003",
+   "date": "2026-09-25T00:00Z",
+   "name": "",
+   "week": {
+    "number": 4
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401820003",
+     "date": "2026-09-25T00:00Z",
+     "competitors": [
+      {
+       "id": "1",
+       "homeAway": "home",
+       "team": {
+        "id": "1",
+        "abbreviation": "BOS",
+        "displayName": "Boston Bruins",
+        "shortDisplayName": "Bruins",
+        "location": "Boston",
+        "name": "Bruins"
+       },
+       "score": "0",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "0-0-0"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 0.0
+        }
+       ]
+      },
+      {
+       "id": "13",
+       "homeAway": "away",
+       "team": {
+        "id": "13",
+        "abbreviation": "NYR",
+        "displayName": "New York Rangers",
+        "shortDisplayName": "Rangers",
+        "location": "New York",
+        "name": "Rangers"
+       },
+       "score": "0",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "0-0-0"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 0.0
+        }
+       ]
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 1,
+      "type": {
+       "name": "STATUS_END_PERIOD",
+       "state": "in",
+       "completed": false,
+       "detail": "End of 1st",
+       "shortDetail": "End of 1st"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 1,
+    "type": {
+     "name": "STATUS_END_PERIOD",
+     "state": "in",
+     "completed": false,
+     "detail": "End of 1st",
+     "shortDetail": "End of 1st"
+    }
+   }
+  }
+ ]
+}

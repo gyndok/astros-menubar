@@ -1,4 +1,4 @@
-"""Following favorite teams in ESPN leagues (NFL, college football).
+"""Following favorite teams in ESPN leagues (NFL, college football, NBA, NHL).
 
 `ESPNFollower` owns the per-team state: resolving config references to
 ESPN teams, fetching scoreboards and schedules (on the worker thread),
@@ -43,6 +43,7 @@ class Followed:
     seen_state: Optional[str] = None
     seen_score: Optional[int] = None
     soon_notified: Optional[str] = None
+    crunch_notified: Optional[str] = None
     final_until: Optional[dt.datetime] = None
 
     @property
@@ -209,16 +210,22 @@ class ESPNFollower:
                 alerts.append(("final_score", "Final Score",
                                f"{name} {me.score}, {them.team.short_name} {them.score}"
                                + (f" — {result}" if result else "")))
-            if (game.state == LIVE and f.seen_score is not None
+            if (f.league.score_alerts and game.state == LIVE and f.seen_score is not None
                     and me.score is not None and me.score > f.seen_score):
                 alerts.append(("scoring_plays", f"{name} Score!",
                                f"{espn.score_line(game)}   {espn.period_label(game, f.league)}"))
+        # Basketball: one "close game late" alert instead of every basket
+        if (notify and not f.league.score_alerts and f.crunch_notified != game.id
+                and espn.is_crunch_time(game, f.league)):
+            f.crunch_notified = game.id
+            alerts.append(("scoring_plays", "Crunch Time",
+                           f"{espn.score_line(game)}   {espn.period_label(game, f.league)}"))
         if (notify and game.state == PRE and game.start and f.soon_notified != game.id
                 and dt.timedelta(0) < game.start - now <= dt.timedelta(minutes=15)):
             f.soon_notified = game.id
             minutes = int((game.start - now).total_seconds() // 60)
             alerts.append(("game_starting", "Game Starting Soon",
-                           f"{name} kick off in ~{minutes} min!"))
+                           f"{name} {f.league.start_verb} in ~{minutes} min!"))
 
         if not same_game:
             f.final_until = None
@@ -262,7 +269,7 @@ class ESPNFollower:
         color = "green" if me.score > them.score else ("red" if me.score < them.score else "yellow")
         score = f"{g.away.score}-{g.home.score}"
         if g.state == LIVE:
-            label = espn.period_label(g, f.league).split(" ")[0]  # "Q3", "Half", "OT"
+            label = espn.short_period(g, f.league)  # "Q3", "P2", "Half", "OT"
             return TitleCandidate(0, f"{f.league.emoji} {score} {label}", color)
         if g.state == FINAL and f.final_until and self.now() < f.final_until:
             return TitleCandidate(1, f"{f.league.emoji} {score} F", color)

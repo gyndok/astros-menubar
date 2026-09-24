@@ -27,13 +27,15 @@ DEFAULT_FAVORITES = [{"league": "mlb", "team": "HOU"}]
 
 # Leagues favorites can name. MLB teams are listed below; ESPN leagues'
 # teams are looked up from ESPN at runtime (see espn.py).
-ESPN_LEAGUES = ("nfl", "ncaaf")
+ESPN_LEAGUES = ("nfl", "ncaaf", "nba", "nhl")
 SUPPORTED_LEAGUES = ("mlb",) + ESPN_LEAGUES
 LEAGUE_ALIASES = {
     "baseball": "mlb",
     "football": "nfl",
     "college-football": "ncaaf", "college football": "ncaaf",
     "cfb": "ncaaf", "ncaa": "ncaaf", "ncaafb": "ncaaf",
+    "basketball": "nba",
+    "hockey": "nhl",
 }
 
 

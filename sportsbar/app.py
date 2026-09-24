@@ -1359,7 +1359,8 @@ class MenuBarApp(rumps.App):
                 if g.away.rank or g.home.rank or any(g.involves(t) for t in favorite_ids)
             ]
         if not games:
-            menu.update([self._item(f"No {league.name} games this week")])
+            when = "today" if league.daily else "this week"
+            menu.update([self._item(f"No {league.name} games {when}")])
             return
         sections = [
             ("🔴 Live", [g for g in games if g.state == LIVE]),

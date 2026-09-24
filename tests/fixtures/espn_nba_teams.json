@@ -1,0 +1,82 @@
+{
+ "sports": [
+  {
+   "leagues": [
+    {
+     "teams": [
+      {
+       "team": {
+        "id": "10",
+        "abbreviation": "HOU",
+        "displayName": "Houston Rockets",
+        "shortDisplayName": "Rockets",
+        "location": "Houston",
+        "name": "Rockets"
+       }
+      },
+      {
+       "team": {
+        "id": "13",
+        "abbreviation": "LAL",
+        "displayName": "Los Angeles Lakers",
+        "shortDisplayName": "Lakers",
+        "location": "Los Angeles",
+        "name": "Lakers"
+       }
+      },
+      {
+       "team": {
+        "id": "12",
+        "abbreviation": "LAC",
+        "displayName": "LA Clippers",
+        "shortDisplayName": "Clippers",
+        "location": "LA",
+        "name": "Clippers"
+       }
+      },
+      {
+       "team": {
+        "id": "2",
+        "abbreviation": "BOS",
+        "displayName": "Boston Celtics",
+        "shortDisplayName": "Celtics",
+        "location": "Boston",
+        "name": "Celtics"
+       }
+      },
+      {
+       "team": {
+        "id": "18",
+        "abbreviation": "NY",
+        "displayName": "New York Knicks",
+        "shortDisplayName": "Knicks",
+        "location": "New York",
+        "name": "Knicks"
+       }
+      },
+      {
+       "team": {
+        "id": "6",
+        "abbreviation": "DAL",
+        "displayName": "Dallas Mavericks",
+        "shortDisplayName": "Mavericks",
+        "location": "Dallas",
+        "name": "Mavericks"
+       }
+      },
+      {
+       "team": {
+        "id": "24",
+        "abbreviation": "SA",
+        "displayName": "San Antonio Spurs",
+        "shortDisplayName": "Spurs",
+        "location": "San Antonio",
+        "name": "Spurs"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

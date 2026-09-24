@@ -1,0 +1,346 @@
+{
+ "leagues": [
+  {
+   "abbreviation": "NBA"
+  }
+ ],
+ "events": [
+  {
+   "id": "401810001",
+   "date": "2026-09-25T00:00Z",
+   "name": "",
+   "week": {
+    "number": 4
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401810001",
+     "date": "2026-09-25T00:00Z",
+     "competitors": [
+      {
+       "id": "13",
+       "homeAway": "home",
+       "team": {
+        "id": "13",
+        "abbreviation": "LAL",
+        "displayName": "Los Angeles Lakers",
+        "shortDisplayName": "Lakers",
+        "location": "Los Angeles",
+        "name": "Lakers"
+       },
+       "score": "96",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "0-1"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 22.0
+        },
+        {
+         "value": 25.0
+        },
+        {
+         "value": 26.0
+        },
+        {
+         "value": 23.0
+        }
+       ]
+      },
+      {
+       "id": "10",
+       "homeAway": "away",
+       "team": {
+        "id": "10",
+        "abbreviation": "HOU",
+        "displayName": "Houston Rockets",
+        "shortDisplayName": "Rockets",
+        "location": "Houston",
+        "name": "Rockets"
+       },
+       "score": "98",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "1-0"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 24.0
+        },
+        {
+         "value": 27.0
+        },
+        {
+         "value": 25.0
+        },
+        {
+         "value": 22.0
+        }
+       ]
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "4:32",
+      "period": 4,
+      "type": {
+       "name": "STATUS_IN_PROGRESS",
+       "state": "in",
+       "completed": false,
+       "detail": "4:32 - 4th",
+       "shortDetail": "4:32 - 4th"
+      }
+     },
+     "venue": {
+      "fullName": "Crypto.com Arena",
+      "address": {
+       "city": "Los Angeles"
+      },
+      "indoor": true
+     },
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "ESPN"
+       ]
+      }
+     ]
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "4:32",
+    "period": 4,
+    "type": {
+     "name": "STATUS_IN_PROGRESS",
+     "state": "in",
+     "completed": false,
+     "detail": "4:32 - 4th",
+     "shortDetail": "4:32 - 4th"
+    }
+   }
+  },
+  {
+   "id": "401810002",
+   "date": "2026-09-24T23:30Z",
+   "name": "",
+   "week": {
+    "number": 4
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401810002",
+     "date": "2026-09-24T23:30Z",
+     "competitors": [
+      {
+       "id": "18",
+       "homeAway": "home",
+       "team": {
+        "id": "18",
+        "abbreviation": "NY",
+        "displayName": "New York Knicks",
+        "shortDisplayName": "Knicks",
+        "location": "New York",
+        "name": "Knicks"
+       },
+       "score": "118",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "0-1"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 28.0
+        },
+        {
+         "value": 30.0
+        },
+        {
+         "value": 27.0
+        },
+        {
+         "value": 25.0
+        },
+        {
+         "value": 8.0
+        }
+       ],
+       "winner": false
+      },
+      {
+       "id": "2",
+       "homeAway": "away",
+       "team": {
+        "id": "2",
+        "abbreviation": "BOS",
+        "displayName": "Boston Celtics",
+        "shortDisplayName": "Celtics",
+        "location": "Boston",
+        "name": "Celtics"
+       },
+       "score": "120",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "1-0"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 30.0
+        },
+        {
+         "value": 28.0
+        },
+        {
+         "value": 25.0
+        },
+        {
+         "value": 27.0
+        },
+        {
+         "value": 10.0
+        }
+       ],
+       "winner": true
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 5,
+      "type": {
+       "name": "STATUS_FINAL",
+       "state": "post",
+       "completed": true,
+       "detail": "Final/OT",
+       "shortDetail": "Final/OT"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 5,
+    "type": {
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "detail": "Final/OT",
+     "shortDetail": "Final/OT"
+    }
+   }
+  },
+  {
+   "id": "401810003",
+   "date": "2026-09-25T01:30Z",
+   "name": "",
+   "week": {
+    "number": 4
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401810003",
+     "date": "2026-09-25T01:30Z",
+     "competitors": [
+      {
+       "id": "24",
+       "homeAway": "home",
+       "team": {
+        "id": "24",
+        "abbreviation": "SA",
+        "displayName": "San Antonio Spurs",
+        "shortDisplayName": "Spurs",
+        "location": "San Antonio",
+        "name": "Spurs"
+       },
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "0-0"
+        }
+       ]
+      },
+      {
+       "id": "6",
+       "homeAway": "away",
+       "team": {
+        "id": "6",
+        "abbreviation": "DAL",
+        "displayName": "Dallas Mavericks",
+        "shortDisplayName": "Mavericks",
+        "location": "Dallas",
+        "name": "Mavericks"
+       },
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "0-0"
+        }
+       ]
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "detail": "Thu, September 24th at 8:30 PM CDT",
+       "shortDetail": "Thu, September 24th at 8:30 PM CDT"
+      }
+     },
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "TNT"
+       ]
+      }
+     ]
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "detail": "Thu, September 24th at 8:30 PM CDT",
+     "shortDetail": "Thu, September 24th at 8:30 PM CDT"
+    }
+   }
+  }
+ ]
+}
