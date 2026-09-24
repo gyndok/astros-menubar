@@ -25,6 +25,23 @@ LEAGUE_ABBR: Dict[int, str] = {AL_ID: "AL", NL_ID: "NL"}
 
 DEFAULT_FAVORITES = [{"league": "mlb", "team": "HOU"}]
 
+# Leagues favorites can name. MLB teams are listed below; ESPN leagues'
+# teams are looked up from ESPN at runtime (see espn.py).
+ESPN_LEAGUES = ("nfl", "ncaaf")
+SUPPORTED_LEAGUES = ("mlb",) + ESPN_LEAGUES
+LEAGUE_ALIASES = {
+    "baseball": "mlb",
+    "football": "nfl",
+    "college-football": "ncaaf", "college football": "ncaaf",
+    "cfb": "ncaaf", "ncaa": "ncaaf", "ncaafb": "ncaaf",
+}
+
+
+def league_key(value) -> str:
+    """Normalize a config league name ("NFL", "college-football") → key."""
+    name = str(value if value is not None else "mlb").strip().lower()
+    return LEAGUE_ALIASES.get(name, name)
+
 
 @dataclass(frozen=True)
 class Team:
@@ -123,21 +140,50 @@ def find_team(league: str, ref) -> Optional[Team]:
     return None
 
 
-def favorite_teams(config: dict) -> List[Team]:
-    """Resolve the config's `favorites` list, in order, skipping bad entries.
+def _raw_favorites(config: dict) -> list:
+    raw = config.get("favorites")
+    return raw if isinstance(raw, list) else DEFAULT_FAVORITES
+
+
+def favorite_refs(config: dict) -> List[Tuple[str, str]]:
+    """Every supported favorite as (league, team reference), in order.
 
     Leagues the app doesn't support yet are ignored (kept in the file) so a
     config written for a newer version doesn't break this one.
     """
-    raw = config.get("favorites")
-    if not isinstance(raw, list):
-        raw = DEFAULT_FAVORITES
+    refs: List[Tuple[str, str]] = []
+    for entry in _raw_favorites(config):
+        if not isinstance(entry, dict) or "team" not in entry:
+            continue
+        league = league_key(entry.get("league"))
+        if league not in SUPPORTED_LEAGUES:
+            continue
+        ref = (league, str(entry["team"]).strip())
+        if ref not in refs:
+            refs.append(ref)
+    return refs
+
+
+def follows_league(config: dict, league: str) -> bool:
+    return any(lg == league for lg, _ in favorite_refs(config))
+
+
+def remove_league_favorites(config: dict, league: str) -> None:
+    """Stop following every team in `league`."""
+    config["favorites"] = [
+        f for f in _raw_favorites(config)
+        if not (isinstance(f, dict) and league_key(f.get("league")) == league)
+    ]
+
+
+def favorite_teams(config: dict) -> List[Team]:
+    """Resolve the config's MLB favorites, in order, skipping bad entries."""
     result: List[Team] = []
-    for entry in raw:
+    for entry in _raw_favorites(config):
         if not isinstance(entry, dict) or "team" not in entry:
             logging.warning("Ignoring malformed favorite: %r", entry)
             continue
-        league = str(entry.get("league", "mlb")).lower()
+        league = league_key(entry.get("league"))
         if league not in TEAMS:
             continue
         team = find_team(league, entry["team"])
@@ -162,12 +208,12 @@ def set_primary_team(config: dict, team: Team) -> None:
     favorites = [f for f in raw if isinstance(f, dict)] if isinstance(raw, list) else []
     favorites = [
         f for f in favorites
-        if not (str(f.get("league", "mlb")).lower() == team.league
+        if not (league_key(f.get("league")) == team.league
                 and find_team(team.league, f.get("team", "")) == team)
     ]
     entry = {"league": team.league, "team": team.abbr}
     idx = next(
-        (i for i, f in enumerate(favorites) if str(f.get("league", "mlb")).lower() == team.league),
+        (i for i, f in enumerate(favorites) if league_key(f.get("league")) == team.league),
         None,
     )
     if idx is None:

@@ -48,7 +48,11 @@ know how the game is going:
 - **Notifications** — game starting soon, final score, Astros scoring plays,
   lineup posted (each individually toggleable in ⚙️ Settings)
 - **⭐ Any MLB team** — the Astros are the default; pick another team in
-  ⚙️ Settings → Favorite Team, and star extra favorites on the scoreboard
+  ⚙️ Settings → Favorite MLB Team, and star extra favorites on the scoreboard
+- **🏈 NFL & college football** — follow any teams: live score and quarter
+  in the menu bar, down and distance, line score, schedule and results, and
+  league scoreboards with poll ranks
+  ([setup](docs/USER_GUIDE.md#-football-nfl--college))
 
 Polling is adaptive: 60s during games and the half hour before first pitch,
 15–30 minutes otherwise, so it's easy on the APIs and your battery.
@@ -101,7 +105,8 @@ Python** and make sure they're allowed.
 A small Python app built on [rumps](https://github.com/jaredks/rumps).
 Data comes from the free, keyless [MLB Stats API](https://statsapi.mlb.com)
 (scores, schedule, standings, lineups, stats),
-[Open-Meteo](https://open-meteo.com) (weather), and optionally
+[Open-Meteo](https://open-meteo.com) (weather), ESPN's public site API (NFL
+and college football), and optionally
 [The Odds API](https://the-odds-api.com) (betting lines). Everything is
 cached in `~/.config/astros-menubar/` so menus populate instantly on launch.
 
@@ -120,6 +125,9 @@ freezes waiting on a slow API.
 | `odds.py` / `weather.py` | The Odds API and Open-Meteo |
 | `gametext.py` | 💬 Game Text messages |
 | `teams.py` | All 30 MLB teams, favorite-team config |
+| `espn.py` | ESPN API (NFL, college football): fetching, parsing, formatting |
+| `espn_follow.py` | Per-team state, notifications, polling for ESPN leagues |
+| `models.py` | League-neutral game model |
 | `config.py` | Config file, cache, logging |
 | `system.py` | Login item (LaunchAgent) and single-instance handling |
 

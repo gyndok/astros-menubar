@@ -1,0 +1,415 @@
+{
+ "leagues": [
+  {
+   "abbreviation": "NCAAF"
+  }
+ ],
+ "week": {
+  "number": 5
+ },
+ "events": [
+  {
+   "id": "401900001",
+   "date": "2026-09-27T00:30Z",
+   "name": "",
+   "week": {
+    "number": 5
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401900001",
+     "date": "2026-09-27T00:30Z",
+     "competitors": [
+      {
+       "id": "251",
+       "homeAway": "home",
+       "team": {
+        "id": "251",
+        "abbreviation": "TEX",
+        "displayName": "Texas Longhorns",
+        "shortDisplayName": "Texas",
+        "location": "Texas",
+        "name": "Longhorns"
+       },
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "4-0"
+        }
+       ],
+       "curatedRank": {
+        "current": 7
+       }
+      },
+      {
+       "id": "61",
+       "homeAway": "away",
+       "team": {
+        "id": "61",
+        "abbreviation": "UGA",
+        "displayName": "Georgia Bulldogs",
+        "shortDisplayName": "Georgia",
+        "location": "Georgia",
+        "name": "Bulldogs"
+       },
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "3-1"
+        }
+       ],
+       "curatedRank": {
+        "current": 12
+       }
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "detail": "Sat, September 26th at 7:30 PM CDT",
+       "shortDetail": "Sat, September 26th at 7:30 PM CDT"
+      }
+     },
+     "venue": {
+      "fullName": "Darrell K Royal-Texas Memorial Stadium",
+      "address": {
+       "city": "Austin"
+      },
+      "indoor": false
+     },
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "ABC"
+       ]
+      }
+     ]
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "detail": "Sat, September 26th at 7:30 PM CDT",
+     "shortDetail": "Sat, September 26th at 7:30 PM CDT"
+    }
+   }
+  },
+  {
+   "id": "401900002",
+   "date": "2026-09-25T00:00Z",
+   "name": "",
+   "week": {
+    "number": 5
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401900002",
+     "date": "2026-09-25T00:00Z",
+     "competitors": [
+      {
+       "id": "2641",
+       "homeAway": "home",
+       "team": {
+        "id": "2641",
+        "abbreviation": "TTU",
+        "displayName": "Texas Tech Red Raiders",
+        "shortDisplayName": "Texas Tech",
+        "location": "Texas Tech",
+        "name": "Red Raiders"
+       },
+       "score": "14",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "2-2"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 7.0
+        },
+        {
+         "value": 7.0
+        }
+       ],
+       "curatedRank": {
+        "current": 99
+       }
+      },
+      {
+       "id": "248",
+       "homeAway": "away",
+       "team": {
+        "id": "248",
+        "abbreviation": "HOU",
+        "displayName": "Houston Cougars",
+        "shortDisplayName": "Houston",
+        "location": "Houston",
+        "name": "Cougars"
+       },
+       "score": "10",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "2-2"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 3.0
+        },
+        {
+         "value": 7.0
+        }
+       ],
+       "curatedRank": {
+        "current": 99
+       }
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 2,
+      "type": {
+       "name": "STATUS_HALFTIME",
+       "state": "in",
+       "completed": false,
+       "detail": "Halftime",
+       "shortDetail": "Halftime"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 2,
+    "type": {
+     "name": "STATUS_HALFTIME",
+     "state": "in",
+     "completed": false,
+     "detail": "Halftime",
+     "shortDetail": "Halftime"
+    }
+   }
+  },
+  {
+   "id": "401900003",
+   "date": "2026-09-26T16:00Z",
+   "name": "",
+   "week": {
+    "number": 5
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401900003",
+     "date": "2026-09-26T16:00Z",
+     "competitors": [
+      {
+       "id": "194",
+       "homeAway": "home",
+       "team": {
+        "id": "194",
+        "abbreviation": "OSU",
+        "displayName": "Ohio State Buckeyes",
+        "shortDisplayName": "Ohio State",
+        "location": "Ohio State",
+        "name": "Buckeyes"
+       },
+       "score": "38",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "4-0"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 14.0
+        },
+        {
+         "value": 10.0
+        },
+        {
+         "value": 7.0
+        },
+        {
+         "value": 7.0
+        }
+       ],
+       "curatedRank": {
+        "current": 1
+       },
+       "winner": true
+      },
+      {
+       "id": "164",
+       "homeAway": "away",
+       "team": {
+        "id": "164",
+        "abbreviation": "RUTG",
+        "displayName": "Rutgers Scarlet Knights",
+        "shortDisplayName": "Rutgers",
+        "location": "Rutgers",
+        "name": "Scarlet Knights"
+       },
+       "score": "10",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "3-1"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 0.0
+        },
+        {
+         "value": 3.0
+        },
+        {
+         "value": 7.0
+        },
+        {
+         "value": 0.0
+        }
+       ],
+       "curatedRank": {
+        "current": 99
+       },
+       "winner": false
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 4,
+      "type": {
+       "name": "STATUS_FINAL",
+       "state": "post",
+       "completed": true,
+       "detail": "Final",
+       "shortDetail": "Final"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 4,
+    "type": {
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "detail": "Final",
+     "shortDetail": "Final"
+    }
+   }
+  },
+  {
+   "id": "401900004",
+   "date": "2026-09-26T19:30Z",
+   "name": "",
+   "week": {
+    "number": 5
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401900004",
+     "date": "2026-09-26T19:30Z",
+     "competitors": [
+      {
+       "id": "2426",
+       "homeAway": "home",
+       "team": {
+        "id": "2426",
+        "abbreviation": "NAVY",
+        "displayName": "Navy Midshipmen",
+        "shortDisplayName": "Navy",
+        "location": "Navy",
+        "name": "Midshipmen"
+       },
+       "curatedRank": {
+        "current": 99
+       }
+      },
+      {
+       "id": "349",
+       "homeAway": "away",
+       "team": {
+        "id": "349",
+        "abbreviation": "ARMY",
+        "displayName": "Army Black Knights",
+        "shortDisplayName": "Army",
+        "location": "Army",
+        "name": "Black Knights"
+       },
+       "curatedRank": {
+        "current": 99
+       }
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "detail": "Sat, September 26th at 2:30 PM CDT",
+       "shortDetail": "Sat, September 26th at 2:30 PM CDT"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "detail": "Sat, September 26th at 2:30 PM CDT",
+     "shortDetail": "Sat, September 26th at 2:30 PM CDT"
+    }
+   }
+  }
+ ]
+}

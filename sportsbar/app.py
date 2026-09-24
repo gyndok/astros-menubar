@@ -65,14 +65,21 @@ from .mlb import (
     parse_scoring_plays,
     team_side,
 )
+from . import espn
+from .espn_follow import ESPNFollower, Followed, TitleCandidate
+from .models import FINAL, LIVE, POSTPONED, PRE
 from .odds import fetch_odds, format_odds_price, parse_odds
 from .teams import (
     DIVISION_NAMES,
     LEAGUE_DIVISIONS,
     MLB_TEAMS,
+    ESPN_LEAGUES,
     Team,
+    favorite_refs,
     favorite_teams,
+    follows_league,
     primary_team,
+    remove_league_favorites,
     set_primary_team,
 )
 from .weather import fetch_weather
@@ -82,6 +89,10 @@ from .worker import BackgroundWorker
 # Caches written before favorites existed belong to the Astros.
 LEGACY_CACHE_TEAM = "mlb/HOU"
 
+# Fixed menu slots for teams in ESPN leagues (NFL, college football):
+# a headline row at the top and a submenu each. Unused slots are hidden.
+ESPN_SLOTS = 6
+
 
 class MenuBarApp(rumps.App):
     """macOS menu bar app that follows your favorite team."""
@@ -90,6 +101,10 @@ class MenuBarApp(rumps.App):
         super().__init__(APP_NAME, title="⚾")
         self.config = load_config()
         self.team: Team = primary_team(self.config)
+        self.follow_mlb: bool = follows_league(self.config, "mlb")
+        self.espn = ESPNFollower()
+        self.espn.configure(favorite_refs(self.config))
+        self.espn.load_cache()
 
         # Data caches
         self.schedule_data: list = []
@@ -144,6 +159,20 @@ class MenuBarApp(rumps.App):
 
     def _build_menu(self) -> None:
         """Create all menu items."""
+        # Headline rows for favorites in ESPN leagues (NFL, college...)
+        self.espn_rows = [rumps.MenuItem("—", callback=self._noop) for _ in range(ESPN_SLOTS)]
+        # Submenu per ESPN-league favorite
+        self.espn_menus = [rumps.MenuItem(f"🏈 Team {n + 1}") for n in range(ESPN_SLOTS)]
+        for menu in self.espn_menus:
+            menu.update([rumps.MenuItem("Loading...")])
+        # League-wide scoreboards for ESPN leagues
+        self.espn_score_menus: Dict[str, rumps.MenuItem] = {}
+        for key in ESPN_LEAGUES:
+            league = espn.LEAGUES[key]
+            menu = rumps.MenuItem(f"{league.emoji} {league.name} Scores")
+            menu.update([rumps.MenuItem("Loading...")])
+            self.espn_score_menus[key] = menu
+
         # Top context-aware lines
         self.top_line_1 = rumps.MenuItem("—", callback=self._noop)
         self.top_line_2 = rumps.MenuItem("—", callback=self._noop)
@@ -262,6 +291,8 @@ class MenuBarApp(rumps.App):
                     div_item.update([team_item])
                 league_item.update([div_item])
             self.team_menu.update([league_item])
+        self.no_mlb_item = rumps.MenuItem("None — don't follow MLB", callback=self.unfollow_mlb)
+        self.team_menu.update([None, self.no_mlb_item])
 
         check_updates_item = rumps.MenuItem("Check for Updates…", callback=self.check_updates)
         edit_config_item = rumps.MenuItem("Edit Config", callback=self.edit_config)
@@ -273,6 +304,7 @@ class MenuBarApp(rumps.App):
         self._update_team_items()
 
         self.menu = [
+            *self.espn_rows,
             self.top_line_1,
             self.top_line_2,
             self.top_line_3,
@@ -284,8 +316,10 @@ class MenuBarApp(rumps.App):
             self.schedule_menu,
             self.lineup_menu,
             self.rotation_menu,
+            *self.espn_menus,
             None,  # separator
             self.scores_menu,
+            *self.espn_score_menus.values(),
             self.standings_menu,
             self.magic_menu,
             self.odds_menu,
@@ -328,7 +362,7 @@ class MenuBarApp(rumps.App):
     def select_team(self, sender: rumps.MenuItem) -> None:
         """Team picker callback: make the chosen team the favorite."""
         team = getattr(sender, "_team", None)
-        if team is None or team == self.team:
+        if team is None or (team == self.team and self.follow_mlb):
             return
         set_primary_team(self.config, team)
         save_config(self.config)
@@ -339,10 +373,20 @@ class MenuBarApp(rumps.App):
         # refresh that's already running.
         self.worker.submit("switch_team", self._refresh_all_work, self._update_all_menus)
 
+    def unfollow_mlb(self, _sender: Any) -> None:
+        """Team picker: stop following MLB (hides the baseball menus)."""
+        if not self.follow_mlb:
+            return
+        remove_league_favorites(self.config, "mlb")
+        save_config(self.config)
+        self.worker.submit("switch_team", self._refresh_all_work, self._update_all_menus)
+
     def _sync_team(self) -> None:
         """Adopt the config's favorite team, resetting per-team state if it
         changed. Runs on the worker thread at the start of a full refresh
         (team picker, Refresh Now after editing the config)."""
+        self.follow_mlb = follows_league(self.config, "mlb")
+        self.espn.configure(favorite_refs(self.config))
         team = primary_team(self.config)
         if team == self.team:
             return
@@ -368,11 +412,19 @@ class MenuBarApp(rumps.App):
     def _update_team_items(self) -> None:
         """Refresh menu items whose text depends on the favorite team."""
         for team_id, item in self.team_items.items():
-            item.state = int(team_id == self.team.id)
-        self.team_menu.title = f"⭐ Favorite Team: {self.team.nickname}"
-        self.notif_scoring_plays.title = f"{self.team.nickname} Scoring Plays"
+            item.state = int(self.follow_mlb and team_id == self.team.id)
+        self.no_mlb_item.state = int(not self.follow_mlb)
+        self.team_menu.title = (
+            f"⭐ Favorite MLB Team: {self.team.nickname}" if self.follow_mlb
+            else "⭐ Favorite MLB Team: None"
+        )
+        self.notif_scoring_plays.title = (
+            f"{self.team.nickname} Scoring Plays" if self.follow_mlb
+            and not self.espn.followed else "Scoring Plays"
+        )
         self.links_menu.clear()
-        for link in quick_links(self.config, self.team):
+        mlb_team = self.team if self.follow_mlb else None
+        for link in quick_links(self.config, mlb_team, self.espn.links()):
             item = rumps.MenuItem(link.get("name", link["url"]), callback=self.open_link)
             item._url = link["url"]
             self.links_menu.update([item])
@@ -542,57 +594,66 @@ class MenuBarApp(rumps.App):
             logging.debug("colored title unavailable: %s", exc)
 
     def update_title(self) -> None:
-        """Set the menu bar title based on game state.
+        """Set the menu bar title from the favorites' games.
 
-        Live: the score, colored — '2-5 ▼7' in green (your team winning),
-        red (losing), or yellow (tied). Final: '2-5 F' colored by result,
-        held for 30 minutes, then back to a plain ⚾. Otherwise: ⚾.
+        The first favorite (in config order) with a live game wins; failing
+        that, one that just finished (held 30 minutes). Scores are colored
+        green/red/yellow for your team winning/losing/tied. Otherwise the
+        icon of your first favorite's sport.
         """
-        state = self.game_state.get("state", "off")
-        if state == "live":
-            game = self.game_state.get("game")
-            if game and self.live_data:
-                side = team_side(game, self.team.id)
-                ld = self.live_data
-                my_runs = ld.get(f"{side}_runs", 0)
-                opp_side = "home" if side == "away" else "away"
-                opp_runs = ld.get(f"{opp_side}_runs", 0)
-                if my_runs > opp_runs:
-                    color = "green"
-                elif my_runs < opp_runs:
-                    color = "red"
-                else:
-                    color = "yellow"
-                half_arrow = "▲" if ld.get("half") == "Top" else "▼"
-                score = f"{ld.get('away_runs', 0)}-{ld.get('home_runs', 0)}"
-                self._set_status_title(f"{score} {half_arrow}{ld.get('inning', '')}", color)
+        best = None
+        mlb_seen = False
+        for order, (league, ref) in enumerate(favorite_refs(self.config)):
+            if league == "mlb":
+                # Only the first MLB favorite (the one followed) has live data
+                if mlb_seen or not self.follow_mlb:
+                    continue
+                mlb_seen = True
+                candidate = self._mlb_title_candidate()
             else:
-                self._set_status_title("⚾")
-        elif state == "final":
-            # Revert to plain ⚾ after 30 minutes
-            if self.final_revert_time and now_local() >= self.final_revert_time:
-                self._set_status_title("⚾")
-            else:
-                game = self.game_state.get("game")
-                if game:
-                    side = team_side(game, self.team.id)
-                    teams = game.get("teams", {})
-                    my_score = teams.get(side, {}).get("score", 0) or 0
-                    opp_side = "home" if side == "away" else "away"
-                    opp_score = teams.get(opp_side, {}).get("score", 0) or 0
-                    away_score = teams.get("away", {}).get("score", 0) or 0
-                    home_score = teams.get("home", {}).get("score", 0) or 0
-                    if my_score > opp_score:
-                        color = "green"
-                    elif my_score < opp_score:
-                        color = "red"
-                    else:
-                        color = "yellow"
-                    self._set_status_title(f"{away_score}-{home_score} F", color)
-                else:
-                    self._set_status_title("⚾")
+                followed = self.espn.find(league, ref)
+                candidate = self.espn.title_candidate(followed) if followed else None
+            if candidate and (best is None or (candidate.rank, order) < best[0]):
+                best = ((candidate.rank, order), candidate)
+        if best:
+            self._set_status_title(best[1].text, best[1].color)
         else:
-            self._set_status_title("⚾")
+            self._set_status_title(self._idle_icon())
+
+    def _idle_icon(self) -> str:
+        refs = favorite_refs(self.config)
+        if refs and refs[0][0] in espn.LEAGUES:
+            return espn.LEAGUES[refs[0][0]].emoji
+        return "⚾"
+
+    def _mlb_title_candidate(self) -> Optional[TitleCandidate]:
+        """The followed MLB team's title: live '2-5 ▼7' or final '2-5 F'
+        (held for 30 minutes), colored by your team winning/losing/tied."""
+        state = self.game_state.get("state", "off")
+        game = self.game_state.get("game")
+        if state == "live" and game and self.live_data:
+            side = team_side(game, self.team.id)
+            ld = self.live_data
+            my_runs = ld.get(f"{side}_runs", 0)
+            opp_side = "home" if side == "away" else "away"
+            opp_runs = ld.get(f"{opp_side}_runs", 0)
+            color = "green" if my_runs > opp_runs else ("red" if my_runs < opp_runs else "yellow")
+            half_arrow = "▲" if ld.get("half") == "Top" else "▼"
+            score = f"{ld.get('away_runs', 0)}-{ld.get('home_runs', 0)}"
+            return TitleCandidate(0, f"{score} {half_arrow}{ld.get('inning', '')}", color)
+        if state == "final" and game:
+            if self.final_revert_time and now_local() >= self.final_revert_time:
+                return None
+            side = team_side(game, self.team.id)
+            teams = game.get("teams", {})
+            my_score = teams.get(side, {}).get("score", 0) or 0
+            opp_side = "home" if side == "away" else "away"
+            opp_score = teams.get(opp_side, {}).get("score", 0) or 0
+            away_score = teams.get("away", {}).get("score", 0) or 0
+            home_score = teams.get("home", {}).get("score", 0) or 0
+            color = "green" if my_score > opp_score else ("red" if my_score < opp_score else "yellow")
+            return TitleCandidate(1, f"{away_score}-{home_score} F", color)
+        return None
 
     def update_top_section(self) -> None:
         """Update the five context-aware lines at the top of the menu."""
@@ -1189,9 +1250,152 @@ class MenuBarApp(rumps.App):
     # Refresh logic
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # Other leagues (ESPN): headline rows, team submenus, scoreboards
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _set_hidden(item: rumps.MenuItem, hidden: bool) -> None:
+        try:
+            item._menuitem.setHidden_(hidden)
+        except Exception:
+            pass
+
+    def _mlb_items(self) -> List[rumps.MenuItem]:
+        return [
+            self.top_line_1, self.top_line_2, self.top_line_3, self.top_line_4,
+            self.top_line_5, self.todays_game_menu, self.plays_menu,
+            self.schedule_menu, self.lineup_menu, self.rotation_menu,
+            self.scores_menu, self.standings_menu, self.magic_menu,
+            self.odds_menu, self.weather_menu, self.stats_menu, self.game_text_item,
+        ]
+
+    def _update_mlb_visibility(self) -> None:
+        """Hide the baseball menus when no MLB team is followed."""
+        if self.follow_mlb:
+            for item in self._mlb_items():
+                if item.title != "—":  # placeholder rows manage their own visibility
+                    self._set_hidden(item, False)
+        else:
+            for item in self._mlb_items():
+                self._set_hidden(item, True)
+
+    def update_espn_menus(self) -> None:
+        followed = self.espn.followed[:ESPN_SLOTS]
+        rows = []
+        for f in followed:
+            if f.team is None:
+                continue
+            line = espn.headline(f.game, f.team, f.league)
+            game = f.game
+            # Only games that are on now, today, or just finished
+            if line and game and (game.state == LIVE or self._is_today(game)):
+                rows.append(line)
+        self._apply_lines(self.espn_rows, rows + ["—"] * (ESPN_SLOTS - len(rows)))
+
+        for n, menu in enumerate(self.espn_menus):
+            if n >= len(followed):
+                self._set_hidden(menu, True)
+                continue
+            self._set_hidden(menu, False)
+            self._fill_espn_team_menu(menu, followed[n])
+
+        followed_leagues = {league.key for league in self.espn.leagues()}
+        for key, menu in self.espn_score_menus.items():
+            self._set_hidden(menu, key not in followed_leagues)
+            if key in followed_leagues:
+                self._fill_espn_scores_menu(menu, espn.LEAGUES[key])
+
+    @staticmethod
+    def _is_today(game) -> bool:
+        return bool(game.start) and game.start.astimezone().date() == now_local().date()
+
+    def _fill_espn_team_menu(self, menu: rumps.MenuItem, f: Followed) -> None:
+        league = f.league
+        live = f.game is not None and f.game.state == LIVE
+        menu.title = f"{league.emoji} {f.label}" + ("  — Live" if live else "")
+        menu.clear()
+        if f.team is None:
+            menu.update([self._item(
+                f"⚠️ No {league.name} team matches “{f.ref}” — check favorites in the config"
+                if f.unresolved else "Loading..."
+            )])
+            return
+        rows: List[Any] = [self._item(line) for line in espn.status_lines(f.game, f.team, league)]
+        if f.game and f.game.state in (LIVE, FINAL):
+            box = espn.line_score_rows(f.game, league)
+            if box:
+                rows.append(None)
+                for line in box:
+                    item = self._item(line)
+                    self._set_mono_title(item, line)
+                    rows.append(item)
+        if f.game and f.game.state == LIVE and f.game.last_play:
+            rows.append(self._item(f"Last play: {f.game.last_play[:90]}"))
+
+        schedule_menu = rumps.MenuItem("📅 Schedule")
+        done = [g for g in f.schedule if g.state in (FINAL, POSTPONED)]
+        ahead = [g for g in f.schedule if g.state not in (FINAL, POSTPONED)]
+        sched_rows = [espn.schedule_row(g, f.team.id, league) for g in done[-4:] + ahead[:8]]
+        sched_rows = [r for r in sched_rows if r]
+        if sched_rows:
+            for text in sched_rows:
+                schedule_menu.update([self._item(text)])
+        else:
+            schedule_menu.update([self._item("Schedule unavailable")])
+        link = rumps.MenuItem(f"🔗 {f.team.short_name} on ESPN", callback=self.open_link)
+        link._url = league.team_url(f.team.id)
+        rows += [None, schedule_menu, link]
+        menu.update(rows)
+
+    def _fill_espn_scores_menu(self, menu: rumps.MenuItem, league: espn.League) -> None:
+        menu.clear()
+        games = self.espn.scoreboards.get(league.key, [])
+        favorite_ids = self.espn.team_ids(league.key)
+        mode = ((self.config.get("leagues") or {}).get(league.key) or {}).get("scoreboard", "top25")
+        if league.ranked and mode != "all":
+            games = [
+                g for g in games
+                if g.away.rank or g.home.rank or any(g.involves(t) for t in favorite_ids)
+            ]
+        if not games:
+            menu.update([self._item(f"No {league.name} games this week")])
+            return
+        sections = [
+            ("🔴 Live", [g for g in games if g.state == LIVE]),
+            ("✅ Completed", [g for g in games if g.state in (FINAL, POSTPONED)]),
+            ("🕐 Upcoming", [g for g in games if g.state == PRE]),
+        ]
+        rows: List[Any] = []
+        for header, section in sections:
+            if not section:
+                continue
+            if rows:
+                rows.append(None)
+            rows.append(self._item(header))
+            rows += [self._item(f"   {espn.scoreboard_row(g, league, favorite_ids)}") for g in section]
+        if league.ranked and mode != "all":
+            rows += [None, self._item("Showing ranked teams and your favorites")]
+        menu.update(rows)
+
+    def _refresh_espn(self, full: bool) -> int:
+        """Refresh ESPN-league favorites (worker thread); returns the
+        polling interval their games call for."""
+        if not self.espn.followed:
+            return 1800
+        try:
+            for title, message in self.espn.refresh(self.config.get("notifications", {}), full=full):
+                self.send_notification(title, message)
+            return self.espn.desired_interval()
+        except Exception as exc:
+            logging.exception("ESPN refresh failed: %s", exc)
+            return 1800
+
     def _update_all_menus(self) -> None:
         """Call all update_* methods."""
         self._update_team_items()
+        self._update_mlb_visibility()
+        self.update_espn_menus()
         self.update_title()
         self.update_top_section()
         self.update_todays_game_menu()
@@ -1205,6 +1409,8 @@ class MenuBarApp(rumps.App):
         self.update_odds_menu()
         self.update_weather_menu()
         self.update_stats_menu()
+        if not self.follow_mlb:
+            self._update_mlb_visibility()
 
     def refresh_all(self, _sender: Any) -> None:
         """Queue a full refresh of all data sources."""
@@ -1215,6 +1421,18 @@ class MenuBarApp(rumps.App):
         logging.info("refresh_all called")
         try:
             self._sync_team()
+        except Exception as exc:
+            logging.exception("_sync_team failed: %s", exc)
+        if self.follow_mlb:
+            self._mlb_full_work()
+        self._set_interval(min(
+            self._mlb_interval() if self.follow_mlb else 1800,
+            self._refresh_espn(full=True),
+        ))
+
+    def _mlb_full_work(self) -> None:
+        """Full MLB refresh for the followed team (worker thread)."""
+        try:
             today = now_local().strftime("%Y-%m-%d")
             end = (now_local() + dt.timedelta(days=14)).strftime("%Y-%m-%d")
             self.schedule_data = fetch_schedule(today, end, self.team.id)
@@ -1337,6 +1555,30 @@ class MenuBarApp(rumps.App):
     def _refresh_primary_work(self) -> None:
         """Primary tick body (runs on the worker thread)."""
         logging.info("refresh_primary tick")
+        interval = self._mlb_primary_work() if self.follow_mlb else 1800
+        interval = min(interval, self._refresh_espn(full=False))
+        self._set_interval(interval)
+
+    def _mlb_interval(self) -> int:
+        """Polling interval the MLB game state calls for."""
+        state = self.game_state.get("state", "off")
+        if state == "live":
+            return 60
+        if state == "final":
+            return 900
+        if state == "pre":
+            game_date_str = (self.game_state.get("game") or {}).get("gameDate", "")
+            try:
+                start = dt.datetime.fromisoformat(game_date_str.replace("Z", "+00:00"))
+                minutes_until = (start - now_local().astimezone()).total_seconds() / 60
+                return 60 if minutes_until <= 30 else 900
+            except Exception:
+                return 900
+        return 1800
+
+    def _mlb_primary_work(self) -> int:
+        """MLB part of the primary tick; returns the interval it wants."""
+        interval = 1800
         try:
             today = now_local().strftime("%Y-%m-%d")
             end = (now_local() + dt.timedelta(days=14)).strftime("%Y-%m-%d")
@@ -1393,11 +1635,11 @@ class MenuBarApp(rumps.App):
 
             # Adaptive polling interval + "starting soon" notification
             if new_state == "live":
-                self._set_interval(60)
+                interval = 60
             elif new_state == "final":
-                self._set_interval(900)
+                interval = 900
             elif new_state == "off":
-                self._set_interval(1800)
+                interval = 1800
             elif new_state == "pre":
                 minutes_until = None
                 game_date_str = (game or {}).get("gameDate", "")
@@ -1410,9 +1652,9 @@ class MenuBarApp(rumps.App):
                         minutes_until = None
                 # Poll fast near first pitch so "live" is caught promptly
                 if minutes_until is not None and minutes_until <= 30:
-                    self._set_interval(60)
+                    interval = 60
                 else:
-                    self._set_interval(900)
+                    interval = 900
                 notifs = self.config.get("notifications", {})
                 if (
                     minutes_until is not None
@@ -1479,6 +1721,7 @@ class MenuBarApp(rumps.App):
 
         except Exception as exc:
             logging.exception("refresh_primary error: %s", exc)
+        return interval
 
     @rumps.timer(7200)
     def refresh_slow(self, _sender: Any) -> None:
@@ -1488,6 +1731,11 @@ class MenuBarApp(rumps.App):
     def _refresh_slow_work(self) -> None:
         """Slow refresh body (runs on the worker thread)."""
         logging.info("refresh_slow tick")
+        if self.follow_mlb:
+            self._mlb_slow_work()
+        self._refresh_espn(full=True)
+
+    def _mlb_slow_work(self) -> None:
         try:
             self.standings_data = fetch_standings()
             write_cache("standings", {"records": self.standings_data})
@@ -1512,6 +1760,7 @@ class MenuBarApp(rumps.App):
 
     def _update_slow_menus(self) -> None:
         """Rebuild the menus fed by the slow refresh."""
+        self.update_espn_menus()
         self.update_standings_menu()
         self.update_magic_menu()
         self.update_stats_menu()

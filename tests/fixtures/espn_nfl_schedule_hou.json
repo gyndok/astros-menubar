@@ -1,0 +1,452 @@
+{
+ "team": {
+  "id": "34",
+  "abbreviation": "HOU",
+  "displayName": "Houston Texans",
+  "shortDisplayName": "Texans",
+  "location": "Houston",
+  "name": "Texans"
+ },
+ "events": [
+  {
+   "id": "401700001",
+   "date": "2026-09-07T20:25Z",
+   "name": "",
+   "week": {
+    "number": 1
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401700001",
+     "date": "2026-09-07T20:25Z",
+     "competitors": [
+      {
+       "id": "14",
+       "homeAway": "home",
+       "team": {
+        "id": "14",
+        "abbreviation": "LAR",
+        "displayName": "Los Angeles Rams",
+        "shortDisplayName": "Rams",
+        "location": "Los Angeles",
+        "name": "Rams"
+       },
+       "score": {
+        "value": 14.0,
+        "displayValue": "14"
+       }
+      },
+      {
+       "id": "34",
+       "homeAway": "away",
+       "team": {
+        "id": "34",
+        "abbreviation": "HOU",
+        "displayName": "Houston Texans",
+        "shortDisplayName": "Texans",
+        "location": "Houston",
+        "name": "Texans"
+       },
+       "score": {
+        "value": 9.0,
+        "displayValue": "9"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 4,
+      "type": {
+       "name": "STATUS_FINAL",
+       "state": "post",
+       "completed": true,
+       "detail": "Final",
+       "shortDetail": "Final"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 4,
+    "type": {
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "detail": "Final",
+     "shortDetail": "Final"
+    }
+   }
+  },
+  {
+   "id": "401700002",
+   "date": "2026-09-14T00:20Z",
+   "name": "",
+   "week": {
+    "number": 2
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401700002",
+     "date": "2026-09-14T00:20Z",
+     "competitors": [
+      {
+       "id": "34",
+       "homeAway": "home",
+       "team": {
+        "id": "34",
+        "abbreviation": "HOU",
+        "displayName": "Houston Texans",
+        "shortDisplayName": "Texans",
+        "location": "Houston",
+        "name": "Texans"
+       },
+       "score": {
+        "value": 20.0,
+        "displayValue": "20"
+       }
+      },
+      {
+       "id": "27",
+       "homeAway": "away",
+       "team": {
+        "id": "27",
+        "abbreviation": "TB",
+        "displayName": "Tampa Bay Buccaneers",
+        "shortDisplayName": "Buccaneers",
+        "location": "Tampa Bay",
+        "name": "Buccaneers"
+       },
+       "score": {
+        "value": 19.0,
+        "displayValue": "19"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 4,
+      "type": {
+       "name": "STATUS_FINAL",
+       "state": "post",
+       "completed": true,
+       "detail": "Final",
+       "shortDetail": "Final"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 4,
+    "type": {
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "detail": "Final",
+     "shortDetail": "Final"
+    }
+   }
+  },
+  {
+   "id": "401700003",
+   "date": "2026-09-21T17:00Z",
+   "name": "",
+   "week": {
+    "number": 3
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401700003",
+     "date": "2026-09-21T17:00Z",
+     "competitors": [
+      {
+       "id": "34",
+       "homeAway": "home",
+       "team": {
+        "id": "34",
+        "abbreviation": "HOU",
+        "displayName": "Houston Texans",
+        "shortDisplayName": "Texans",
+        "location": "Houston",
+        "name": "Texans"
+       },
+       "score": {
+        "value": 27.0,
+        "displayValue": "27"
+       }
+      },
+      {
+       "id": "11",
+       "homeAway": "away",
+       "team": {
+        "id": "11",
+        "abbreviation": "IND",
+        "displayName": "Indianapolis Colts",
+        "shortDisplayName": "Colts",
+        "location": "Indianapolis",
+        "name": "Colts"
+       },
+       "score": {
+        "value": 13.0,
+        "displayValue": "13"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 4,
+      "type": {
+       "name": "STATUS_FINAL",
+       "state": "post",
+       "completed": true,
+       "detail": "Final",
+       "shortDetail": "Final"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 4,
+    "type": {
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "detail": "Final",
+     "shortDetail": "Final"
+    }
+   }
+  },
+  {
+   "id": "401800001",
+   "date": "2026-09-25T00:15Z",
+   "name": "",
+   "week": {
+    "number": 4
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401800001",
+     "date": "2026-09-25T00:15Z",
+     "competitors": [
+      {
+       "id": "30",
+       "homeAway": "home",
+       "team": {
+        "id": "30",
+        "abbreviation": "JAX",
+        "displayName": "Jacksonville Jaguars",
+        "shortDisplayName": "Jaguars",
+        "location": "Jacksonville",
+        "name": "Jaguars"
+       },
+       "score": {
+        "value": 17.0,
+        "displayValue": "17"
+       }
+      },
+      {
+       "id": "34",
+       "homeAway": "away",
+       "team": {
+        "id": "34",
+        "abbreviation": "HOU",
+        "displayName": "Houston Texans",
+        "shortDisplayName": "Texans",
+        "location": "Houston",
+        "name": "Texans"
+       },
+       "score": {
+        "value": 21.0,
+        "displayValue": "21"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "4:12",
+      "period": 3,
+      "type": {
+       "name": "STATUS_IN_PROGRESS",
+       "state": "in",
+       "completed": false,
+       "detail": "4:12 - 3rd",
+       "shortDetail": "4:12 - 3rd"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "4:12",
+    "period": 3,
+    "type": {
+     "name": "STATUS_IN_PROGRESS",
+     "state": "in",
+     "completed": false,
+     "detail": "4:12 - 3rd",
+     "shortDetail": "4:12 - 3rd"
+    }
+   }
+  },
+  {
+   "id": "401700005",
+   "date": "2026-10-04T17:00Z",
+   "name": "",
+   "week": {
+    "number": 5
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401700005",
+     "date": "2026-10-04T17:00Z",
+     "competitors": [
+      {
+       "id": "34",
+       "homeAway": "home",
+       "team": {
+        "id": "34",
+        "abbreviation": "HOU",
+        "displayName": "Houston Texans",
+        "shortDisplayName": "Texans",
+        "location": "Houston",
+        "name": "Texans"
+       }
+      },
+      {
+       "id": "33",
+       "homeAway": "away",
+       "team": {
+        "id": "33",
+        "abbreviation": "BAL",
+        "displayName": "Baltimore Ravens",
+        "shortDisplayName": "Ravens",
+        "location": "Baltimore",
+        "name": "Ravens"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "detail": "Sun, October 4th at 12:00 PM CDT",
+       "shortDetail": "Sun, October 4th at 12:00 PM CDT"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "detail": "Sun, October 4th at 12:00 PM CDT",
+     "shortDetail": "Sun, October 4th at 12:00 PM CDT"
+    }
+   }
+  },
+  {
+   "id": "401700007",
+   "date": "2026-10-19T00:20Z",
+   "name": "",
+   "week": {
+    "number": 7
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401700007",
+     "date": "2026-10-19T00:20Z",
+     "competitors": [
+      {
+       "id": "26",
+       "homeAway": "home",
+       "team": {
+        "id": "26",
+        "abbreviation": "SEA",
+        "displayName": "Seattle Seahawks",
+        "shortDisplayName": "Seahawks",
+        "location": "Seattle",
+        "name": "Seahawks"
+       }
+      },
+      {
+       "id": "34",
+       "homeAway": "away",
+       "team": {
+        "id": "34",
+        "abbreviation": "HOU",
+        "displayName": "Houston Texans",
+        "shortDisplayName": "Texans",
+        "location": "Houston",
+        "name": "Texans"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "detail": "Sun, October 18th at 7:20 PM CDT",
+       "shortDetail": "Sun, October 18th at 7:20 PM CDT"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "detail": "Sun, October 18th at 7:20 PM CDT",
+     "shortDetail": "Sun, October 18th at 7:20 PM CDT"
+    }
+   }
+  }
+ ]
+}

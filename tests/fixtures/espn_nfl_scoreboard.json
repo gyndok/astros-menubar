@@ -1,0 +1,520 @@
+{
+ "leagues": [
+  {
+   "abbreviation": "NFL"
+  }
+ ],
+ "week": {
+  "number": 4
+ },
+ "events": [
+  {
+   "id": "401800001",
+   "date": "2026-09-25T00:15Z",
+   "name": "",
+   "week": {
+    "number": 4
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401800001",
+     "date": "2026-09-25T00:15Z",
+     "competitors": [
+      {
+       "id": "30",
+       "homeAway": "home",
+       "team": {
+        "id": "30",
+        "abbreviation": "JAX",
+        "displayName": "Jacksonville Jaguars",
+        "shortDisplayName": "Jaguars",
+        "location": "Jacksonville",
+        "name": "Jaguars"
+       },
+       "score": "17",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "1-2"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 3.0
+        },
+        {
+         "value": 14.0
+        },
+        {
+         "value": 0.0
+        }
+       ]
+      },
+      {
+       "id": "34",
+       "homeAway": "away",
+       "team": {
+        "id": "34",
+        "abbreviation": "HOU",
+        "displayName": "Houston Texans",
+        "shortDisplayName": "Texans",
+        "location": "Houston",
+        "name": "Texans"
+       },
+       "score": "21",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "2-1"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 7.0
+        },
+        {
+         "value": 7.0
+        },
+        {
+         "value": 7.0
+        }
+       ]
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "4:12",
+      "period": 3,
+      "type": {
+       "name": "STATUS_IN_PROGRESS",
+       "state": "in",
+       "completed": false,
+       "detail": "4:12 - 3rd",
+       "shortDetail": "4:12 - 3rd"
+      }
+     },
+     "venue": {
+      "fullName": "EverBank Stadium",
+      "address": {
+       "city": "Jacksonville",
+       "state": "FL"
+      },
+      "indoor": false
+     },
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "Prime Video"
+       ]
+      }
+     ],
+     "situation": {
+      "down": 2,
+      "distance": 7,
+      "yardLine": 35,
+      "downDistanceText": "2nd & 7 at HOU 35",
+      "possession": "30",
+      "isRedZone": false,
+      "lastPlay": {
+       "text": "T.Etienne run for 4 yards"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "4:12",
+    "period": 3,
+    "type": {
+     "name": "STATUS_IN_PROGRESS",
+     "state": "in",
+     "completed": false,
+     "detail": "4:12 - 3rd",
+     "shortDetail": "4:12 - 3rd"
+    }
+   }
+  },
+  {
+   "id": "401800002",
+   "date": "2026-09-21T20:25Z",
+   "name": "",
+   "week": {
+    "number": 4
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401800002",
+     "date": "2026-09-21T20:25Z",
+     "competitors": [
+      {
+       "id": "13",
+       "homeAway": "home",
+       "team": {
+        "id": "13",
+        "abbreviation": "LV",
+        "displayName": "Las Vegas Raiders",
+        "shortDisplayName": "Raiders",
+        "location": "Las Vegas",
+        "name": "Raiders"
+       },
+       "score": "24",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "1-2"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 0.0
+        },
+        {
+         "value": 14.0
+        },
+        {
+         "value": 3.0
+        },
+        {
+         "value": 7.0
+        },
+        {
+         "value": 0.0
+        }
+       ],
+       "winner": false
+      },
+      {
+       "id": "12",
+       "homeAway": "away",
+       "team": {
+        "id": "12",
+        "abbreviation": "KC",
+        "displayName": "Kansas City Chiefs",
+        "shortDisplayName": "Chiefs",
+        "location": "Kansas City",
+        "name": "Chiefs"
+       },
+       "score": "27",
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "3-0"
+        }
+       ],
+       "linescores": [
+        {
+         "value": 7.0
+        },
+        {
+         "value": 3.0
+        },
+        {
+         "value": 7.0
+        },
+        {
+         "value": 7.0
+        },
+        {
+         "value": 3.0
+        }
+       ],
+       "winner": true
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 5,
+      "type": {
+       "name": "STATUS_FINAL",
+       "state": "post",
+       "completed": true,
+       "detail": "Final/OT",
+       "shortDetail": "Final/OT"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 5,
+    "type": {
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "detail": "Final/OT",
+     "shortDetail": "Final/OT"
+    }
+   }
+  },
+  {
+   "id": "401800003",
+   "date": "2026-09-27T17:00Z",
+   "name": "",
+   "week": {
+    "number": 4
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401800003",
+     "date": "2026-09-27T17:00Z",
+     "competitors": [
+      {
+       "id": "19",
+       "homeAway": "home",
+       "team": {
+        "id": "19",
+        "abbreviation": "NYG",
+        "displayName": "New York Giants",
+        "shortDisplayName": "Giants",
+        "location": "New York",
+        "name": "Giants"
+       },
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "0-3"
+        }
+       ]
+      },
+      {
+       "id": "6",
+       "homeAway": "away",
+       "team": {
+        "id": "6",
+        "abbreviation": "DAL",
+        "displayName": "Dallas Cowboys",
+        "shortDisplayName": "Cowboys",
+        "location": "Dallas",
+        "name": "Cowboys"
+       },
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "2-1"
+        }
+       ]
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "detail": "Sun, September 27th at 12:00 PM CDT",
+       "shortDetail": "Sun, September 27th at 12:00 PM CDT"
+      }
+     },
+     "venue": {
+      "fullName": "MetLife Stadium",
+      "address": {
+       "city": "East Rutherford"
+      },
+      "indoor": false
+     },
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "FOX"
+       ]
+      }
+     ]
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "detail": "Sun, September 27th at 12:00 PM CDT",
+     "shortDetail": "Sun, September 27th at 12:00 PM CDT"
+    }
+   }
+  },
+  {
+   "id": "401800004",
+   "date": "2026-09-27T17:00Z",
+   "name": "",
+   "week": {
+    "number": 4
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401800004",
+     "date": "2026-09-27T17:00Z",
+     "competitors": [
+      {
+       "id": "2",
+       "homeAway": "home",
+       "team": {
+        "id": "2",
+        "abbreviation": "BUF",
+        "displayName": "Buffalo Bills",
+        "shortDisplayName": "Bills",
+        "location": "Buffalo",
+        "name": "Bills"
+       }
+      },
+      {
+       "id": "15",
+       "homeAway": "away",
+       "team": {
+        "id": "15",
+        "abbreviation": "MIA",
+        "displayName": "Miami Dolphins",
+        "shortDisplayName": "Dolphins",
+        "location": "Miami",
+        "name": "Dolphins"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "name": "STATUS_POSTPONED",
+       "state": "pre",
+       "completed": false,
+       "detail": "Postponed",
+       "shortDetail": "Postponed"
+      }
+     }
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "name": "STATUS_POSTPONED",
+     "state": "pre",
+     "completed": false,
+     "detail": "Postponed",
+     "shortDetail": "Postponed"
+    }
+   }
+  },
+  {
+   "id": "401800005",
+   "date": "2026-09-29T00:15Z",
+   "name": "",
+   "week": {
+    "number": 4
+   },
+   "season": {
+    "year": 2026,
+    "type": 2
+   },
+   "competitions": [
+    {
+     "id": "401800005",
+     "date": "2026-09-29T00:15Z",
+     "competitors": [
+      {
+       "id": "14",
+       "homeAway": "home",
+       "team": {
+        "id": "14",
+        "abbreviation": "LAR",
+        "displayName": "Los Angeles Rams",
+        "shortDisplayName": "Rams",
+        "location": "Los Angeles",
+        "name": "Rams"
+       },
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "2-1"
+        }
+       ]
+      },
+      {
+       "id": "25",
+       "homeAway": "away",
+       "team": {
+        "id": "25",
+        "abbreviation": "SF",
+        "displayName": "San Francisco 49ers",
+        "shortDisplayName": "49ers",
+        "location": "San Francisco",
+        "name": "49ers"
+       },
+       "records": [
+        {
+         "name": "overall",
+         "type": "total",
+         "summary": "2-1"
+        }
+       ]
+      }
+     ],
+     "status": {
+      "clock": 0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "detail": "Mon, September 28th at 7:15 PM CDT",
+       "shortDetail": "Mon, September 28th at 7:15 PM CDT"
+      }
+     },
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "ESPN"
+       ]
+      }
+     ]
+    }
+   ],
+   "status": {
+    "clock": 0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "detail": "Mon, September 28th at 7:15 PM CDT",
+     "shortDetail": "Mon, September 28th at 7:15 PM CDT"
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,122 @@
+{
+ "sports": [
+  {
+   "leagues": [
+    {
+     "teams": [
+      {
+       "team": {
+        "id": "251",
+        "abbreviation": "TEX",
+        "displayName": "Texas Longhorns",
+        "shortDisplayName": "Texas",
+        "location": "Texas",
+        "name": "Longhorns"
+       }
+      },
+      {
+       "team": {
+        "id": "61",
+        "abbreviation": "UGA",
+        "displayName": "Georgia Bulldogs",
+        "shortDisplayName": "Georgia",
+        "location": "Georgia",
+        "name": "Bulldogs"
+       }
+      },
+      {
+       "team": {
+        "id": "194",
+        "abbreviation": "OSU",
+        "displayName": "Ohio State Buckeyes",
+        "shortDisplayName": "Ohio State",
+        "location": "Ohio State",
+        "name": "Buckeyes"
+       }
+      },
+      {
+       "team": {
+        "id": "164",
+        "abbreviation": "RUTG",
+        "displayName": "Rutgers Scarlet Knights",
+        "shortDisplayName": "Rutgers",
+        "location": "Rutgers",
+        "name": "Scarlet Knights"
+       }
+      },
+      {
+       "team": {
+        "id": "248",
+        "abbreviation": "HOU",
+        "displayName": "Houston Cougars",
+        "shortDisplayName": "Houston",
+        "location": "Houston",
+        "name": "Cougars"
+       }
+      },
+      {
+       "team": {
+        "id": "2641",
+        "abbreviation": "TTU",
+        "displayName": "Texas Tech Red Raiders",
+        "shortDisplayName": "Texas Tech",
+        "location": "Texas Tech",
+        "name": "Red Raiders"
+       }
+      },
+      {
+       "team": {
+        "id": "245",
+        "abbreviation": "TA&M",
+        "displayName": "Texas A&M Aggies",
+        "shortDisplayName": "Texas A&M",
+        "location": "Texas A&M",
+        "name": "Aggies"
+       }
+      },
+      {
+       "team": {
+        "id": "99",
+        "abbreviation": "LSU",
+        "displayName": "LSU Tigers",
+        "shortDisplayName": "LSU",
+        "location": "LSU",
+        "name": "Tigers"
+       }
+      },
+      {
+       "team": {
+        "id": "142",
+        "abbreviation": "MIZ",
+        "displayName": "Missouri Tigers",
+        "shortDisplayName": "Missouri",
+        "location": "Missouri",
+        "name": "Tigers"
+       }
+      },
+      {
+       "team": {
+        "id": "349",
+        "abbreviation": "ARMY",
+        "displayName": "Army Black Knights",
+        "shortDisplayName": "Army",
+        "location": "Army",
+        "name": "Black Knights"
+       }
+      },
+      {
+       "team": {
+        "id": "2426",
+        "abbreviation": "NAVY",
+        "displayName": "Navy Midshipmen",
+        "shortDisplayName": "Navy",
+        "location": "Navy",
+        "name": "Midshipmen"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

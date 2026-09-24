@@ -7,7 +7,7 @@ import datetime as dt
 import json
 import logging
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Sequence
 
 import yaml
 
@@ -54,17 +54,22 @@ TEAM_LINKS = {
 }
 
 
-def quick_links(config: dict, team: Team) -> List[dict]:
-    """The Quick Links menu: the user's own list, or defaults for `team`."""
+def quick_links(
+    config: dict, team: Optional[Team], extra: Sequence[dict] = ()
+) -> List[dict]:
+    """The Quick Links menu: the user's own list, or defaults for the MLB
+    `team` (None if not following MLB) plus `extra` links (other leagues)."""
     links = config.get("quick_links")
     if isinstance(links, list):
         return [link for link in links if isinstance(link, dict) and "url" in link]
-    return [
-        dict(USER_GUIDE_LINK),
-        {"name": f"{team.nickname} on MLB.com", "url": team.site_url},
-        {"name": "MLB.tv", "url": "https://www.mlb.com/tv"},
-        *copy.deepcopy(TEAM_LINKS.get(team.key, [])),
-    ]
+    result = [dict(USER_GUIDE_LINK)]
+    if team is not None:
+        result += [
+            {"name": f"{team.nickname} on MLB.com", "url": team.site_url},
+            {"name": "MLB.tv", "url": "https://www.mlb.com/tv"},
+            *copy.deepcopy(TEAM_LINKS.get(team.key, [])),
+        ]
+    return result + [dict(link) for link in extra]
 
 
 def ensure_paths() -> None:
