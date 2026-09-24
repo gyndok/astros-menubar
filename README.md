@@ -144,6 +144,18 @@ pip install -r requirements-dev.txt
 python3 -m pytest
 ```
 
+Build a release — `.app` bundle signed with your Developer ID, notarized,
+stapled, and zipped as `dist/Astros-Menu-Bar-<version>-arm64.zip`:
+
+```bash
+./release.sh
+```
+
+It needs a Developer ID Application certificate in your keychain and a
+notarytool profile (`xcrun notarytool store-credentials`); set
+`SIGN_IDENTITY` / `NOTARY_PROFILE` to override the defaults. `./build.sh`
+alone makes an ad-hoc-signed build for local use.
+
 Not affiliated with MLB or the Houston Astros. Go Stros. 🚀
 
 ## License

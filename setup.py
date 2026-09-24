@@ -38,6 +38,12 @@ OPTIONS = {
         "pytest", "_pytest", "pluggy", "iniconfig", "pygments", "py",
         # build/packaging tooling
         "setuptools", "pkg_resources", "pip", "wheel", "distutils",
+        # CPython's own test suite and test-only extension modules
+        "test", "_testcapi", "_testinternalcapi", "_testlimitedcapi",
+        "_testbuffer", "_testclinic", "_testclinic_limited",
+        "_testexternalinspection", "_testimportmultiple", "_testmultiphase",
+        "_testsinglephase", "_ctypes_test", "_xxtestfuzz",
+        "xxlimited", "xxlimited_35", "xxsubtype",
         # scientific / GUI stacks
         "numpy", "tkinter", "_tkinter", "matplotlib", "PIL", "IPython",
         # optional requests/urllib3 backends
