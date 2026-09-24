@@ -10,6 +10,8 @@ from .teams import Team
 
 
 ODDS_API_BASE = "https://api.the-odds-api.com/v4/sports/baseball_mlb"
+# The Odds API lists Caesars Sportsbook under its former William Hill US key.
+BOOKMAKER = "williamhill_us"
 
 
 def is_team(odds_name: str, team: Team) -> bool:
@@ -26,7 +28,7 @@ def fetch_odds(api_key: str, team: Team) -> dict:
         url = (
             f"{ODDS_API_BASE}/odds/"
             f"?apiKey={api_key}&regions=us&markets=h2h,spreads,totals"
-            f"&oddsFormat=american&bookmakers=draftkings"
+            f"&oddsFormat=american&bookmakers={BOOKMAKER}"
         )
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
