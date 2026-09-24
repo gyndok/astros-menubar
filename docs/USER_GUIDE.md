@@ -4,8 +4,9 @@ Everything the app does, menu by menu.
 
 The app follows the **Houston Astros** out of the box, but it works for any
 MLB team — pick yours under ⚙️ Settings → **⭐ Favorite MLB Team**. Wherever
-this guide says "Astros", read "your team". It can also follow **NFL and
-college football** teams — see [🏈 Football](#-football-nfl--college).
+this guide says "Astros", read "your team". It can also follow **NFL,
+college football, NBA, and NHL** teams — see
+[Other sports](#other-sports-nfl-college-football-nba-nhl).
 
 <p align="center">
   <img src="screenshot.png" alt="Astros Menu Bar on game day" width="420">
@@ -117,41 +118,49 @@ guarantees the prize — when it hits zero you'll see **✅ CLINCHED** (or
 **✗ Eliminated** if a race slips away). Numbers ignore tiebreakers, same as
 the ones published on MLB.com.
 
-## 🏈 Football (NFL & college)
+## Other sports: NFL, college football, NBA, NHL
 
-Add NFL or college football teams to `favorites` in the config (⚙️ Settings
+Add teams from any of these leagues to `favorites` in the config (⚙️ Settings
 → **Edit Config**, then **🔄 Refresh Now**):
 
 ```yaml
 favorites:
   - league: nfl
     team: HOU          # Texans
-  - league: ncaaf
+  - league: ncaaf      # college football
     team: Texas        # Longhorns
+  - league: nba
+    team: Rockets
+  - league: nhl
+    team: Stars
   - league: mlb
     team: HOU          # Astros — or leave MLB out entirely
 ```
 
 Name teams by abbreviation (`HOU`, `TEX`), full name (`Texas Longhorns`),
 short name (`Texas`), or nickname (`Texans`). If a name fits more than one
-school — "Tigers" — the team's menu says so; use its abbreviation instead.
+team — "Tigers" in college football — the team's menu says so; use its
+abbreviation instead.
 
-Each football team gets:
+Each team gets:
 
-- **A line at the top of the menu** on game day — kickoff time before the
-  game, the live score and quarter during it, the final after
-- **Its own submenu** (🏈 Texans) — matchup, records, TV, and stadium
-  before kickoff; score, quarter and clock, possession, down and distance,
-  red zone, and the last play while live; a quarter-by-quarter line score;
-  a **📅 Schedule** with results (`W 27-13  vs IND`) and upcoming games; and
-  a link to the team's ESPN page
-- **The menu bar score** when it's playing: <code>🏈 21-17 Q3</code>,
-  colored like baseball (green winning, red losing, yellow tied) and held
-  30 minutes after the final
+- **A line at the top of the menu** on game day — start time before the
+  game, the live score and clock during it, the final after
+- **Its own submenu** (🏈 Texans, 🏀 Rockets, 🏒 Stars) — matchup, records,
+  TV, and venue before the game; score and clock while live (plus
+  possession, down and distance, red zone, and the last play in football);
+  a period-by-period line score; a **📅 Schedule** with results
+  (`W 27-13  vs IND`) and upcoming games; and a link to the team's ESPN page
+- **The menu bar score** when it's playing — <code>🏈 21-17 Q3</code>,
+  <code>🏀 98-96 Q4</code>, <code>🏒 2-1 P2</code> — colored like baseball
+  (green winning, red losing, yellow tied) and held 30 minutes after the
+  final. `Half`, `End P2`, `OT`, and `SO` (shootout) show up as you'd expect.
 
-**🏈 NFL Scores** and **🏈 College Football Scores** list the week's games
-(live, completed, upcoming), with college poll ranks (`#7 TEX`). The college
-scoreboard shows ranked teams and your favorites; to see every FBS game, add:
+**Scoreboards** — **🏈 NFL Scores** and **🏈 College Football Scores** list
+the week's games; **🏀 NBA Scores** and **🏒 NHL Scores** list today's. Each
+has live, completed, and upcoming sections, with your teams starred and
+college poll ranks (`#7 TEX`). The college scoreboard shows ranked teams and
+your favorites; to see every FBS game, add:
 
 ```yaml
 leagues:
@@ -163,9 +172,13 @@ leagues:
 your `favorites` list that's live, so list them in the order you care about.
 If you don't list an MLB team, the baseball menus disappear.
 
-Game starting, final score, and scoring notifications work for football too,
-using the same toggles. Football standings, odds, and weather aren't
-available yet.
+**Notifications** use the same toggles as baseball: game starting soon (and
+underway), final score, and scoring — every touchdown, field goal, or goal
+for your team. Basketball would buzz on every basket, so for NBA teams the
+scoring toggle instead sends one **Crunch Time** alert when the game is
+within 5 points in the last 5 minutes of the 4th quarter or overtime.
+
+Standings, odds, and weather aren't available for these leagues yet.
 
 ## 💰 Vegas Odds
 
@@ -217,8 +230,9 @@ Pick the MLB team the app follows: **American League / National League →
 division → team**. The checkmark shows your current team. Switching reloads
 everything — schedule, live game, lineup, magic numbers, odds, weather,
 links, and the Game Text lines — for the new team right away. Choose
-**None — don't follow MLB** to hide the baseball menus (football fans).
-Football teams are set in the config (see [🏈 Football](#-football-nfl--college)).
+**None — don't follow MLB** to hide the baseball menus (if you only follow other sports).
+Teams in other leagues are set in the config (see
+[Other sports](#other-sports-nfl-college-football-nba-nhl)).
 
 ### Notifications
 
@@ -256,7 +270,7 @@ favorites:                  # in priority order for the menu bar score
     team: HOU               # abbreviation, full name, or nickname
   - league: mlb             # other MLB teams are starred on 🌎 MLB Scores
     team: Dodgers
-  - league: nfl             # NFL and college football (ncaaf) teams
+  - league: nfl             # also: ncaaf (college football), nba, nhl
     team: Texans
   - league: ncaaf
     team: Texas
@@ -317,6 +331,6 @@ rm -rf ~/.config/astros-menubar ~/Library/LaunchAgents/com.gyndok.astros-menubar
 | Standings, team & pitcher stats | MLB Stats API | every 2 hours |
 | Vegas odds | [The Odds API](https://the-odds-api.com) (free key) | every 2 hours |
 | Weather | [Open-Meteo](https://open-meteo.com) (free) | every 2 hours |
-| NFL & college football scores, schedules | ESPN's public site API (free, no key) | 60s while live, 15–30 min otherwise; schedules every 2 hours |
+| NFL, college football, NBA & NHL scores, schedules | ESPN's public site API (free, no key) | 60s while live, 15–30 min otherwise; schedules every 2 hours |
 
 Not affiliated with MLB or the Houston Astros. Go Stros. 🚀

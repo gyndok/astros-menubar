@@ -1,4 +1,4 @@
-"""ESPN site API: NFL and college football (NBA and NHL use the same shape).
+"""ESPN site API: NFL, college football, NBA, and NHL.
 
 ESPN's `site.api.espn.com` endpoints are free and keyless but
 undocumented, so everything that knows their JSON layout lives in this
@@ -8,6 +8,7 @@ games come out as `models.Game`.
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import logging
 from dataclasses import dataclass, field
@@ -32,6 +33,10 @@ class League:
     scoreboard_params: Dict[str, str] = field(default_factory=dict)
     teams_params: Dict[str, str] = field(default_factory=dict)
     ranked: bool = False      # has a top-25 poll
+    daily: bool = False       # scoreboard is today's games, not the week's
+    start_verb: str = "kick off"          # "Rockets tip off in ~10 min!"
+    score_alerts: bool = True  # alert on every score (not basketball)
+    shootout: bool = False    # regular-season ties end in a shootout (NHL)
 
     @property
     def base(self) -> str:
@@ -50,7 +55,17 @@ LEAGUES: Dict[str, League] = {
         teams_params={"limit": "1000"},
         ranked=True,
     ),
+    "nba": League(
+        "nba", "NBA", "🏀", "basketball", "nba", "Q", 4,
+        daily=True, start_verb="tip off", score_alerts=False,
+    ),
+    "nhl": League(
+        "nhl", "NHL", "🏒", "hockey", "nhl", "P", 3,
+        daily=True, start_verb="drop the puck", shootout=True,
+    ),
 }
+
+REGULAR_SEASON = 2
 
 STATE_MAP = {"pre": PRE, "in": LIVE, "post": FINAL}
 POSTPONED_NAMES = {"STATUS_POSTPONED", "STATUS_DELAYED"}
@@ -289,25 +304,67 @@ def ordinal(n: int) -> str:
     return f"{n}{suffix}"
 
 
+def period_name(game: Game, league: League) -> str:
+    """ "Q3" / "P2" in regulation; "OT", "2OT", or (NHL regular season,
+    after one OT) "SO" beyond it."""
+    ot = game.period - league.regulation_periods
+    if ot <= 0:
+        return f"{league.period_prefix}{game.period}"
+    if league.shootout and ot >= 2 and game.season_type in (None, REGULAR_SEASON):
+        return "SO"
+    return "OT" if ot == 1 else f"{ot}OT"
+
+
 def period_label(game: Game, league: League) -> str:
-    """Compact game clock: "Q3 4:12", "Half", "OT", "F", "F/OT", "PPD"."""
-    reg = league.regulation_periods
+    """Compact game clock: "Q3 4:12", "P2 8:31", "Half", "End P2", "F",
+    "F/OT", "F/SO", "PPD"."""
     if game.state == POSTPONED:
         return "PPD"
     if game.state == CANCELED:
         return "CNX"
-    ot = game.period - reg
-    ot_label = ("OT" if ot == 1 else f"{ot}OT") if ot > 0 else ""
     if game.state == FINAL:
-        return f"F/{ot_label}" if ot_label else "F"
+        if game.period > league.regulation_periods:
+            return f"F/{period_name(game, league)}"
+        return "F"
     if game.state == LIVE:
         if game.status_name == "STATUS_HALFTIME":
             return "Half"
-        name = ot_label or f"{league.period_prefix}{game.period}"
+        name = period_name(game, league)
         if game.status_name == "STATUS_END_PERIOD":
             return f"End {name}"
+        if name == "SO":
+            return name
         return f"{name} {game.clock}".strip()
     return kickoff_label(game)
+
+
+def short_period(game: Game, league: League) -> str:
+    """Period without the clock, for the menu bar: "Q3", "P2", "Half",
+    "End P2", "OT"."""
+    if game.state == LIVE and game.status_name not in ("STATUS_HALFTIME", "STATUS_END_PERIOD"):
+        return period_name(game, league)
+    return period_label(game, league)
+
+
+def clock_seconds(game: Game) -> Optional[float]:
+    """Game clock as seconds left in the period ("4:32" → 272, "38.5")."""
+    try:
+        if ":" in game.clock:
+            minutes, seconds = game.clock.split(":", 1)
+            return int(minutes) * 60 + float(seconds)
+        return float(game.clock)
+    except (TypeError, ValueError):
+        return None
+
+
+def is_crunch_time(game: Game, league: League) -> bool:
+    """Close game late: last period (or OT), under 5:00, within 5 points."""
+    if game.state != LIVE or game.away.score is None or game.home.score is None:
+        return False
+    if game.period < league.regulation_periods or game.status_name == "STATUS_END_PERIOD":
+        return False
+    left = clock_seconds(game)
+    return left is not None and left <= 300 and abs(game.away.score - game.home.score) <= 5
 
 
 def kickoff_label(game: Game, with_day: bool = True) -> str:
@@ -430,9 +487,12 @@ def line_score_rows(game: Game, league: League) -> List[str]:
     n = max(league.regulation_periods, len(game.away.periods), len(game.home.periods))
     if not game.away.periods and not game.home.periods:
         return []
-    labels = [str(i) if i <= league.regulation_periods else
-              ("OT" if i == league.regulation_periods + 1 else f"{i - league.regulation_periods}OT")
-              for i in range(1, n + 1)]
+    def label(i: int) -> str:
+        if i <= league.regulation_periods:
+            return str(i)
+        return period_name(dataclasses.replace(game, period=i), league)
+
+    labels = [label(i) for i in range(1, n + 1)]
     width = max(len(game.away.team.abbr), len(game.home.team.abbr), 3) + 1
 
     def cells(side: Side) -> str:

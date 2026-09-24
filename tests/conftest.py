@@ -60,6 +60,12 @@ class FakeAPI:
             ("/football/college-football/teams/", {"events": []}),
             ("/football/college-football/teams", "espn_ncaaf_teams.json"),
             ("/football/college-football/scoreboard", "espn_ncaaf_scoreboard.json"),
+            ("/basketball/nba/teams/", {"events": []}),
+            ("/basketball/nba/teams", "espn_nba_teams.json"),
+            ("/basketball/nba/scoreboard", "espn_nba_scoreboard.json"),
+            ("/hockey/nhl/teams/", {"events": []}),
+            ("/hockey/nhl/teams", "espn_nhl_teams.json"),
+            ("/hockey/nhl/scoreboard", "espn_nhl_scoreboard.json"),
             # MLB and friends
             ("/feed/live", "feed_live.json"),
             ("/boxscore", "boxscore.json"),
