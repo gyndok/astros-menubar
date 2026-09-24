@@ -13,8 +13,9 @@ echo "Installing py2app..."
 $PYTHON -m pip install --user --break-system-packages py2app 2>/dev/null || \
 $PYTHON -m pip install py2app
 
-# Clean previous build
+# Clean previous build (and stale bytecode, which py2app would bundle)
 rm -rf build dist
+find sportsbar -name __pycache__ -type d -prune -exec rm -rf {} +
 
 # Build the .app bundle
 echo "Building .app..."
