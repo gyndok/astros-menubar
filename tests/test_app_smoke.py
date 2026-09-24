@@ -1,7 +1,7 @@
 """End-to-end smoke tests for the menu bar app, runnable on any OS.
 
 rumps, AppKit, and PyObjCTools are replaced with small stand-ins so the
-real AstrosMenuBarApp can be driven headlessly: timers are ticked by hand,
+real MenuBarApp can be driven headlessly: timers are ticked by hand,
 and "main thread" callbacks queued with AppHelper.callAfter run only when
 the test pumps them — exactly like the AppKit run loop would.
 """
@@ -167,7 +167,7 @@ def harness(monkeypatch, config_dir, fake_api, central_time):
     def make_app(**config_overrides):
         if config_overrides:
             (config_dir / "config.yaml").write_text(yaml.safe_dump(config_overrides))
-        app = app_module.AstrosMenuBarApp()
+        app = app_module.MenuBarApp()
         apps.append(app)
         return app
 
@@ -304,6 +304,101 @@ def test_check_updates_runs_in_background(harness, monkeypatch):
     assert harness.api.calls[-1][1] == "sportsbar-worker"
     assert harness.notifications[-1][0] == "Update Available"
     assert opened == ["https://example.com/release"]
+
+
+def test_menus_are_labelled_for_the_favorite_team(harness):
+    app = harness.make_app()
+    harness.tick(app)
+    assert app.team_menu.title == "⭐ Favorite Team: Astros"
+    assert app.notif_scoring_plays.title == "Astros Scoring Plays"
+    assert app.team_items[117].state == 1
+    assert sum(item.state for item in app.team_items.values()) == 1
+    assert "Astros on MLB.com" in app.links_menu.titles()
+    assert app.magic_menu.titles()[0].startswith("HOU 88-67")
+
+
+def test_picking_a_team_switches_everything(harness):
+    app = harness.make_app()
+    harness.tick(app)
+    harness.api.calls.clear()
+
+    app.select_team(app.team_items[136])  # Seattle Mariners
+    harness.loop.pump(app)
+
+    # Saved to config
+    saved = yaml.safe_load((harness.config_dir / "config.yaml").read_text())
+    assert saved["favorites"] == [{"league": "mlb", "team": "SEA"}]
+    # Refetched for the new team, off the main thread
+    urls = [u for u, _ in harness.api.calls]
+    assert any("teamId=136" in u for u in urls)
+    assert any("/teams/136/stats" in u for u in urls)
+    assert {thread for _, thread in harness.api.calls} == {"sportsbar-worker"}
+
+    # Same HOU 3 @ SEA 2 game, now from Seattle's side: losing → red
+    assert app.title == "3-2 ▼7"
+    assert app.status_button.attributed.attrs["color"] == "red"
+    assert app.top_line_4.title == "TV: ROOT Sports NW"
+    assert app.plays_menu.titles()[1].startswith("⭐ ▼4")  # SEA's runs starred
+    assert not app.plays_menu.titles()[0].startswith("⭐")
+    assert app.team_menu.title == "⭐ Favorite Team: Mariners"
+    assert app.notif_scoring_plays.title == "Mariners Scoring Plays"
+    assert app.team_items[136].state == 1 and app.team_items[117].state == 0
+    assert "Mariners on MLB.com" in app.links_menu.titles()
+    magic = app.magic_menu.titles()
+    assert magic[0].startswith("SEA 86-69")
+    assert "🏆 Win AL West: 10  (2.0 GB)" in magic
+    # Game is at Seattle → home ballpark weather
+    assert "latitude=47.5914" in next(u for u in urls if "open-meteo" in u)
+    # Lineup is Seattle's (empty in the fixture), not Houston's
+    assert app.lineup_menu.titles() == ["Lineup not yet announced"]
+
+
+def test_picking_the_current_team_does_nothing(harness):
+    app = harness.make_app()
+    harness.tick(app)
+    harness.api.calls.clear()
+    app.select_team(app.team_items[117])
+    harness.loop.pump(app)
+    assert harness.api.calls == []
+
+
+def test_refresh_now_picks_up_edited_favorites(harness):
+    app = harness.make_app()
+    harness.tick(app)
+    (harness.config_dir / "config.yaml").write_text(
+        yaml.safe_dump({"favorites": [{"league": "mlb", "team": "Mariners"}]})
+    )
+    app.manual_refresh(None)
+    harness.loop.pump(app)
+    assert app.team.abbr == "SEA"
+    assert app.team_menu.title == "⭐ Favorite Team: Mariners"
+
+
+def test_extra_favorites_are_starred_on_scoreboard(harness):
+    app = harness.make_app(favorites=[
+        {"league": "mlb", "team": "HOU"}, {"league": "mlb", "team": "BOS"},
+    ])
+    harness.tick(app)
+    scores = app.scores_menu.titles()
+    assert "   ⭐ HOU 3 — SEA 2   ▼7" in scores
+    assert "   ⭐ NYY 5 — BOS 4   F/10" in scores
+    assert "   CHC 2 — STL 7   F" in scores
+
+
+def test_cached_data_from_another_team_is_ignored(harness):
+    from sportsbar import config
+    config.write_cache("schedule", {"games": [{"gamePk": 1}], "team": "mlb/SEA"})
+    config.write_cache("team_stats", {"hitting": {"wins": 1}, "team": "mlb/SEA"})
+    app = harness.make_app()  # follows HOU
+    assert app.schedule_data == [] and app.team_stats == {}
+
+
+def test_legacy_cache_without_team_belongs_to_astros(harness):
+    from sportsbar import config
+    config.write_cache("schedule", {"games": [{"gamePk": 1}]})
+    assert harness.make_app().schedule_data == [{"gamePk": 1}]
+    config.write_cache("schedule", {"games": [{"gamePk": 1}]})
+    assert harness.make_app(favorites=[{"league": "mlb", "team": "SEA"}]).schedule_data == []
 
 
 def test_toggle_notification_persists(harness):

@@ -54,15 +54,21 @@
      "broadcasts": [
       {
        "type": "TV",
-       "name": "ROOT Sports NW"
+       "name": "ROOT Sports NW",
+       "homeAway": "home",
+       "isNational": false
       },
       {
        "type": "TV",
-       "name": "Space City Home Network"
+       "name": "Space City Home Network",
+       "homeAway": "away",
+       "isNational": false
       },
       {
        "type": "AM",
-       "name": "SportsTalk 790"
+       "name": "SportsTalk 790",
+       "homeAway": "away",
+       "isNational": false
       }
      ]
     }
@@ -120,7 +126,15 @@
      "broadcasts": [
       {
        "type": "TV",
-       "name": "Space City Home Network"
+       "name": "Space City Home Network",
+       "homeAway": "home",
+       "isNational": false
+      },
+      {
+       "type": "TV",
+       "name": "FS1",
+       "homeAway": "home",
+       "isNational": true
       }
      ]
     }

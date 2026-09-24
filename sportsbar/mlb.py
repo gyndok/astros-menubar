@@ -7,14 +7,13 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
-from typing import List
+from typing import Collection, List
 
 import requests
 
 from .config import now_local
+from .teams import AL_ID, LEAGUE_DIVISIONS, MLB_BY_ID, NL_ID
 
-
-ASTROS_TEAM_ID = 117
 MLB_API_BASE = "https://statsapi.mlb.com/api/v1"
 
 # Division IDs
@@ -29,16 +28,16 @@ DIVISIONS = {
 
 # League IDs
 LEAGUES = {
-    "American League": 103,
-    "National League": 104,
+    "American League": AL_ID,
+    "National League": NL_ID,
 }
 
 
-def fetch_schedule(start_date: str, end_date: str) -> list:
-    """Fetch Astros games in date range with probable pitchers and broadcasts."""
+def fetch_schedule(start_date: str, end_date: str, team_id: int) -> list:
+    """Fetch a team's games in date range with probable pitchers and broadcasts."""
     try:
         url = (
-            f"{MLB_API_BASE}/schedule?sportId=1&teamId={ASTROS_TEAM_ID}"
+            f"{MLB_API_BASE}/schedule?sportId=1&teamId={team_id}"
             f"&startDate={start_date}&endDate={end_date}"
             f"&hydrate=probablePitcher,broadcasts"
         )
@@ -75,14 +74,15 @@ def fetch_league_scores() -> list:
 NON_GAME_STATES = {"Postponed": "PPD", "Cancelled": "CNX", "Suspended": "SUSP"}
 
 
-def format_league_game(game: dict) -> str:
-    """One-line scoreboard row for a league-wide game."""
+def format_league_game(game: dict, favorite_ids: Collection[int] = ()) -> str:
+    """One-line scoreboard row for a league-wide game (favorites starred)."""
     away = game.get("teams", {}).get("away", {})
     home = game.get("teams", {}).get("home", {})
     away_abbr = away.get("team", {}).get("abbreviation", "?")
     home_abbr = home.get("team", {}).get("abbreviation", "?")
-    star = "⭐ " if ASTROS_TEAM_ID in (
-        away.get("team", {}).get("id"), home.get("team", {}).get("id")
+    star = "⭐ " if any(
+        tid in favorite_ids
+        for tid in (away.get("team", {}).get("id"), home.get("team", {}).get("id"))
     ) else ""
 
     detailed = game.get("status", {}).get("detailedState", "")
@@ -165,9 +165,6 @@ def fetch_standings() -> list:
         return []
 
 
-AL_DIVISION_IDS = {200, 201, 202}
-
-
 def flatten_league_teams(standings: list, division_ids: set) -> list:
     """Flatten standings records into one list of team dicts for a league."""
     teams = []
@@ -203,53 +200,53 @@ def magic_number_vs(team_wins: int, rival_losses: int) -> int:
     return max(0, 163 - team_wins - rival_losses)
 
 
-def compute_magic_numbers(standings: list) -> dict:
-    """Compute Astros magic numbers from standings data.
+def compute_magic_numbers(standings: list, team_id: int, league_id: int) -> dict:
+    """Compute a team's magic numbers from standings data.
 
     Returns division / playoff-berth / wild-card / #1-seed magic numbers.
     All numbers ignore tiebreakers (same convention as published numbers).
     The rival for each race is the relevant team with the fewest losses:
-      - division: fewest losses among other AL West teams
-      - playoffs (6 AL spots): 6th-fewest losses among the other 14 AL teams
+      - division: fewest losses among other teams in its division
+      - playoffs (6 spots): 6th-fewest losses among the other 14 league teams
       - wild card (3 spots): 4th-fewest losses among non-division-leaders
-      - #1 seed: fewest losses among all other AL teams
+      - #1 seed: fewest losses among all other teams in its league
     """
-    teams = flatten_league_teams(standings, AL_DIVISION_IDS)
-    astros = next((t for t in teams if t["id"] == ASTROS_TEAM_ID), None)
-    if not astros:
+    teams = flatten_league_teams(standings, set(LEAGUE_DIVISIONS.get(league_id, ())))
+    me = next((t for t in teams if t["id"] == team_id), None)
+    if not me:
         return {}
-    others = [t for t in teams if t["id"] != ASTROS_TEAM_ID]
+    others = [t for t in teams if t["id"] != team_id]
     if not others:
         return {}
-    wins = astros["wins"]
+    wins = me["wins"]
 
     result = {
         "wins": wins,
-        "losses": astros["losses"],
-        "remaining": max(0, 162 - wins - astros["losses"]),
-        "games_back": astros["games_back"],
-        "league_rank": str(astros.get("league_rank", "")),
-        "division_leader": astros["division_leader"],
-        "division_champ": astros["division_champ"],
-        "clinched_postseason": astros["clinched"],
-        "division_eliminated": astros.get("elimination_number") == "E",
-        "wc_eliminated": astros.get("wc_elimination_number") == "E",
+        "losses": me["losses"],
+        "remaining": max(0, 162 - wins - me["losses"]),
+        "games_back": me["games_back"],
+        "league_rank": str(me.get("league_rank", "")),
+        "division_leader": me["division_leader"],
+        "division_champ": me["division_champ"],
+        "clinched_postseason": me["clinched"],
+        "division_eliminated": me.get("elimination_number") == "E",
+        "wc_eliminated": me.get("wc_elimination_number") == "E",
     }
 
     # Division: prefer MLB's published magic number when present
     division_mn = None
-    api_mn = astros.get("magic_number")
+    api_mn = me.get("magic_number")
     if api_mn not in (None, "", "-"):
         try:
             division_mn = int(api_mn)
         except (TypeError, ValueError):
             division_mn = None
-    div_rivals = [t for t in others if t["div_id"] == astros["div_id"]]
+    div_rivals = [t for t in others if t["div_id"] == me["div_id"]]
     if division_mn is None and div_rivals:
         division_mn = magic_number_vs(wins, min(t["losses"] for t in div_rivals))
     result["division"] = division_mn if division_mn is not None else 0
 
-    # Playoff berth: hold off all but 5 other AL teams (6 total spots)
+    # Playoff berth: hold off all but 5 other league teams (6 total spots)
     all_losses = sorted(t["losses"] for t in others)
     result["playoffs"] = magic_number_vs(wins, all_losses[5]) if len(all_losses) > 5 else 0
 
@@ -261,18 +258,18 @@ def compute_magic_numbers(standings: list) -> dict:
         magic_number_vs(wins, non_leader_losses[3]) if len(non_leader_losses) > 3 else 0
     )
 
-    # #1 AL seed: finish ahead of every other AL team
+    # #1 seed: finish ahead of every other team in the league
     result["top_seed"] = magic_number_vs(wins, all_losses[0])
 
     return result
 
 
-def fetch_team_stats() -> dict:
-    """Fetch Astros team hitting and pitching stats for current season."""
+def fetch_team_stats(team_id: int) -> dict:
+    """Fetch a team's hitting and pitching stats for the current season."""
     result = {}
     try:
         year = now_local().year
-        url = f"{MLB_API_BASE}/teams/{ASTROS_TEAM_ID}/stats?stats=season&group=hitting&season={year}"
+        url = f"{MLB_API_BASE}/teams/{team_id}/stats?stats=season&group=hitting&season={year}"
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
         hitting_stats = resp.json().get("stats", [])
@@ -281,7 +278,7 @@ def fetch_team_stats() -> dict:
             if splits:
                 result["hitting"] = splits[0].get("stat", {})
 
-        url = f"{MLB_API_BASE}/teams/{ASTROS_TEAM_ID}/stats?stats=season&group=pitching&season={year}"
+        url = f"{MLB_API_BASE}/teams/{team_id}/stats?stats=season&group=pitching&season={year}"
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
         pitching_stats = resp.json().get("stats", [])
@@ -351,18 +348,28 @@ def detect_game_state(games: list) -> dict:
     return {"state": "final", "game": game, "game_pk": game["gamePk"]}
 
 
-def get_astros_side(game: dict) -> str:
-    """Return 'away' or 'home' based on which side the Astros are."""
-    if game["teams"]["away"]["team"]["id"] == ASTROS_TEAM_ID:
+def team_side(game: dict, team_id: int) -> str:
+    """Return 'away' or 'home' based on which side `team_id` is on."""
+    if game["teams"]["away"]["team"]["id"] == team_id:
         return "away"
     return "home"
 
 
-def opponent_team_id(game: dict) -> int:
+def other_side(side: str) -> str:
+    return "home" if side == "away" else "away"
+
+
+def opponent_team_id(game: dict, team_id: int) -> int:
     """Return the opponent's team ID."""
-    side = get_astros_side(game)
-    opp_side = "home" if side == "away" else "away"
-    return game["teams"][opp_side]["team"]["id"]
+    return game["teams"][other_side(team_side(game, team_id))]["team"]["id"]
+
+
+def nickname(team_ref: dict) -> str:
+    """Short team name ("Red Sox") for a schedule/feed team dict."""
+    known = MLB_BY_ID.get(team_ref.get("id"))
+    if known:
+        return known.nickname
+    return team_ref.get("teamName") or team_ref.get("name", "").split(" ")[-1]
 
 
 def format_game_time(game: dict) -> str:
@@ -384,15 +391,19 @@ def format_record(game: dict, side: str) -> str:
     return f"{rec.get('wins', 0)}-{rec.get('losses', 0)}"
 
 
-def get_tv_broadcast(game: dict) -> str:
-    """Get the TV broadcast name, preferring Astros home network."""
-    broadcasts = game.get("broadcasts", [])
-    for b in broadcasts:
-        if b.get("type") == "TV" and "Space City" in b.get("name", ""):
-            return b["name"]
-    for b in broadcasts:
-        if b.get("type") == "TV":
+def get_tv_broadcast(game: dict, team_id: int) -> str:
+    """Get the TV broadcast name, preferring the team's own network,
+    then a national broadcast, then whatever TV is listed."""
+    tv = [b for b in game.get("broadcasts", []) if b.get("type") == "TV"]
+    side = team_side(game, team_id) if game.get("teams") else None
+    for b in tv:
+        if b.get("homeAway") == side and not b.get("isNational"):
             return b.get("name", "")
+    for b in tv:
+        if b.get("isNational"):
+            return b.get("name", "")
+    for b in tv:
+        return b.get("name", "")
     return "TBD"
 
 
@@ -455,7 +466,7 @@ def parse_live_data(feed: dict) -> dict:
     }
 
 
-def parse_scoring_plays(feed: dict, astros_side: str) -> list:
+def parse_scoring_plays(feed: dict, my_side: str) -> list:
     """Extract scoring plays from the live feed, in chronological order."""
     plays = feed.get("liveData", {}).get("plays", {})
     all_plays = plays.get("allPlays", [])
@@ -475,7 +486,7 @@ def parse_scoring_plays(feed: dict, astros_side: str) -> list:
             "away_score": res.get("awayScore", 0),
             "home_score": res.get("homeScore", 0),
             "description": res.get("description", "").strip(),
-            "astros": batting_side == astros_side,
+            "mine": batting_side == my_side,
         })
     return result
 

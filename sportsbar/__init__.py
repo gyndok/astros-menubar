@@ -1,1 +1,1 @@
-"""Menu bar sports scoreboard — currently the Astros, via the MLB Stats API."""
+"""Menu bar sports scoreboard for your favorite team (MLB, via the MLB Stats API)."""

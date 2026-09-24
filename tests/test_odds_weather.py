@@ -1,7 +1,10 @@
 import logging
 
 from sportsbar import odds, weather
+from sportsbar.teams import find_team
 from tests.conftest import load_fixture
+
+HOU = find_team("mlb", "HOU")
 
 
 def astros_event():
@@ -9,13 +12,28 @@ def astros_event():
 
 
 def test_fetch_odds_finds_astros_game(fake_api):
-    event = odds.fetch_odds("secret-key")
+    event = odds.fetch_odds("secret-key", HOU)
     assert event["id"] == "def"
     assert "apiKey=secret-key" in fake_api.calls[0][0]
 
 
+def test_fetch_odds_finds_other_teams(fake_api):
+    assert odds.fetch_odds("k", find_team("mlb", "BOS"))["id"] == "abc"
+    assert odds.fetch_odds("k", find_team("mlb", "SEA"))["id"] == "def"
+    assert odds.fetch_odds("k", find_team("mlb", "LAD")) == {}
+
+
+def test_is_team_matches_odds_api_names():
+    assert odds.is_team("Houston Astros", HOU)
+    assert odds.is_team("Arizona Diamondbacks", find_team("mlb", "AZ"))
+    assert odds.is_team("Oakland Athletics", find_team("mlb", "ATH"))
+    assert odds.is_team("Athletics", find_team("mlb", "ATH"))
+    assert not odds.is_team("Chicago White Sox", find_team("mlb", "BOS"))
+    assert not odds.is_team("Chicago Cubs", find_team("mlb", "CWS"))
+
+
 def test_fetch_odds_without_key_makes_no_request(fake_api):
-    assert odds.fetch_odds("") == {}
+    assert odds.fetch_odds("", HOU) == {}
     assert fake_api.calls == []
 
 
@@ -26,7 +44,7 @@ def test_fetch_odds_never_logs_api_key(fake_api, caplog):
     import requests
     requests.get = boom  # fake_api fixture's monkeypatch restores it
     with caplog.at_level(logging.ERROR):
-        assert odds.fetch_odds("secret-key") == {}
+        assert odds.fetch_odds("secret-key", HOU) == {}
     assert "secret-key" not in caplog.text
     assert "***" in caplog.text
 
@@ -58,6 +76,13 @@ def test_fetch_weather(fake_api, frozen_now):
     assert round(w["wind_mph"]) == 10
     assert w["condition"] == "Partly cloudy"
     assert w["updated"] == "2026-09-24T19:30"
+
+
+def test_fetch_weather_uses_correct_ballpark(fake_api, frozen_now):
+    weather.fetch_weather(158)  # Milwaukee: missing from the old table
+    assert "latitude=43.028" in fake_api.calls[-1][0]
+    weather.fetch_weather(116)  # Detroit: the old table pointed at Coors Field
+    assert "latitude=42.339" in fake_api.calls[-1][0]
 
 
 def test_fetch_weather_unknown_team_or_error(fake_api):

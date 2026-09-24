@@ -2,6 +2,10 @@
 
 Everything the app does, menu by menu.
 
+The app follows the **Houston Astros** out of the box, but it works for any
+MLB team — pick yours under ⚙️ Settings → **⭐ Favorite Team**. Wherever this
+guide says "Astros", read "your team".
+
 <p align="center">
   <img src="screenshot.png" alt="Astros Menu Bar on game day" width="420">
 </p>
@@ -88,7 +92,8 @@ Every game in the league today, in three sections:
 - **✅ Completed** — finals; `F/10` means extra innings; `PPD` postponed
 - **🕐 Upcoming** — matchup and local start time
 
-The Astros game is starred ⭐. Sections that are empty are hidden.
+Your team's game is starred ⭐ — and so is any other team you list under
+`favorites` in the config. Sections that are empty are hidden.
 
 ## 📊 Standings
 
@@ -98,14 +103,15 @@ section ranked by the current wild-card race.
 
 ## 🔮 Magic Numbers
 
-How close the Astros are to clinching, updated all season:
+How close your team is to clinching, updated all season (shown here for the
+Astros — the division and league follow your team):
 
 - **🏆 Win AL West** — MLB's official magic number when published
 - **🎟 Make the Playoffs** — any berth (division title or wild card)
 - **🃏 Clinch a Wild Card**
-- **🥇 Clinch #1 AL Seed** — best record in the American League
+- **🥇 Clinch #1 AL Seed** — best record in the league
 
-A magic number is the combined count of **Astros wins + rival losses** that
+A magic number is the combined count of **your team's wins + rival losses** that
 guarantees the prize — when it hits zero you'll see **✅ CLINCHED** (or
 **✗ Eliminated** if a race slips away). Numbers ignore tiebreakers, same as
 the ones published on MLB.com.
@@ -123,14 +129,15 @@ Without a key the menu simply says so — nothing else is affected.
 
 ## 🌤 Ballpark Weather
 
-Current conditions **wherever tonight's game is** — Daikin Park for home
-games, the opponent's park on the road. Temperature, condition, daily
+Current conditions **wherever tonight's game is** — your team's park for
+home games, the opponent's park on the road. Temperature, condition, daily
 high/low, and wind.
 
 ## 🔗 Quick Links
 
-One-click links: Astros.com, MLB.tv, Space City Home Network, r/Astros, and
-the Astros on X. Add your own in the config file (see below).
+One-click links for your team: its MLB.com page and MLB.tv (plus Space City
+Home Network, r/Astros, and the Astros on X for Houston). Replace them with
+your own in the config file (see below).
 
 ## 📊 Team Stats
 
@@ -153,6 +160,13 @@ Forces an immediate refresh of everything. The app already refreshes itself
 
 ## ⚙️ Settings
 
+### ⭐ Favorite Team
+
+Pick the team the whole app follows: **American League / National League →
+division → team**. The checkmark shows your current team. Switching reloads
+everything — schedule, live game, lineup, magic numbers, odds, weather,
+links, and the Game Text lines — for the new team right away.
+
 ### Notifications
 
 Four independent toggles (✓ = on):
@@ -161,7 +175,7 @@ Four independent toggles (✓ = on):
 |--------------|---------------|
 | **Game Starting Soon** | ~15 minutes before first pitch, and again at first pitch |
 | **Final Score** | The moment the game ends, with the score and W/L |
-| **Astros Scoring Plays** | Any time the Astros add runs |
+| **Astros Scoring Plays** | Any time your team adds runs (named for your team) |
 | **Lineup Posted** | When the day's batting order is announced |
 
 If notifications never appear, check **System Settings → Notifications** and
@@ -184,6 +198,11 @@ Opens the config file in your default editor. Everything in it:
 ```yaml
 # ~/.config/astros-menubar/config.yaml
 odds_api_key: ""            # from the-odds-api.com (free) — enables Vegas Odds
+favorites:                  # first MLB team = the one the app follows
+  - league: mlb
+    team: HOU               # abbreviation, full name, or nickname
+  - league: mlb             # any others are starred on 🌎 MLB Scores
+    team: Dodgers
 notifications:
   game_starting: true
   final_score: true
@@ -191,11 +210,12 @@ notifications:
   lineup_posted: false
 show_odds: true
 show_weather: true
-quick_links:                # add/remove/reorder as you like
-  - name: Astros.com
-    url: https://www.mlb.com/astros
-  - name: MLB.tv
-    url: https://www.mlb.com/tv
+quick_links: auto           # "auto" = links for your team, or your own list:
+# quick_links:
+#   - name: Astros.com
+#     url: https://www.mlb.com/astros
+#   - name: MLB.tv
+#     url: https://www.mlb.com/tv
 ```
 
 After editing, click **🔄 Refresh Now** to apply.

@@ -4,9 +4,10 @@
 [![Latest release](https://img.shields.io/github/v/release/gyndok/astros-menubar?label=latest&color=002D62)](https://github.com/gyndok/astros-menubar/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
-Follow the Houston Astros all season from your macOS menu bar. Live scores,
-schedule, lineups, standings, magic numbers, Vegas odds, ballpark weather,
-and a league-wide scoreboard — one click away, all day.
+Follow the Houston Astros — or any MLB team — all season from your macOS
+menu bar. Live scores, schedule, lineups, standings, magic numbers, Vegas
+odds, ballpark weather, and a league-wide scoreboard — one click away, all
+day.
 
 <p align="center">
   <img src="docs/screenshot.png" alt="Astros Menu Bar on game day" width="420">
@@ -46,6 +47,8 @@ know how the game is going:
   clipboard, ready to paste into the group text
 - **Notifications** — game starting soon, final score, Astros scoring plays,
   lineup posted (each individually toggleable in ⚙️ Settings)
+- **⭐ Any MLB team** — the Astros are the default; pick another team in
+  ⚙️ Settings → Favorite Team, and star extra favorites on the scoreboard
 
 Polling is adaptive: 60s during games and the half hour before first pitch,
 15–30 minutes otherwise, so it's easy on the APIs and your battery.
@@ -116,6 +119,7 @@ freezes waiting on a slow API.
 | `mlb.py` | MLB Stats API fetching, parsing, and formatting |
 | `odds.py` / `weather.py` | The Odds API and Open-Meteo |
 | `gametext.py` | 💬 Game Text messages |
+| `teams.py` | All 30 MLB teams, favorite-team config |
 | `config.py` | Config file, cache, logging |
 | `system.py` | Login item (LaunchAgent) and single-instance handling |
 
