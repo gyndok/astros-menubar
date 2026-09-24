@@ -8,6 +8,7 @@ Astros are live at Seattle (HOU 3, SEA 2, bottom 7th).
 
 from __future__ import annotations
 
+import copy
 import datetime as dt
 import json
 import sys
@@ -15,6 +16,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Callable, List, Optional
+from urllib.parse import urlencode
 
 import pytest
 
@@ -51,6 +53,14 @@ class FakeAPI:
 
     def __init__(self) -> None:
         self.routes: List[tuple] = [
+            # ESPN (most specific first)
+            ("/football/nfl/teams/", "espn_nfl_schedule_hou.json"),
+            ("/football/nfl/teams", "espn_nfl_teams.json"),
+            ("/football/nfl/scoreboard", "espn_nfl_scoreboard.json"),
+            ("/football/college-football/teams/", {"events": []}),
+            ("/football/college-football/teams", "espn_ncaaf_teams.json"),
+            ("/football/college-football/scoreboard", "espn_ncaaf_scoreboard.json"),
+            # MLB and friends
             ("/feed/live", "feed_live.json"),
             ("/boxscore", "boxscore.json"),
             ("/standings", "standings.json"),
@@ -76,14 +86,17 @@ class FakeAPI:
                 return name
         return None
 
-    def get(self, url: str, timeout: Optional[float] = None, **_kw):
+    def get(self, url: str, params: Optional[dict] = None,
+            timeout: Optional[float] = None, **_kw):
+        if params:
+            url = f"{url}?{urlencode(params)}"
         self.calls.append((url, threading.current_thread().name))
         if self.fail:
             raise ConnectionError("network down")
         name = self.resolve(url)
         if name is None:
             return FakeResponse({}, 404)
-        payload = name if not isinstance(name, str) else load_fixture(name)
+        payload = load_fixture(name) if isinstance(name, str) else copy.deepcopy(name)
         return FakeResponse(payload)
 
 

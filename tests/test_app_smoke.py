@@ -9,6 +9,7 @@ the test pumps them — exactly like the AppKit run loop would.
 from __future__ import annotations
 
 import copy
+import datetime as dt
 import queue
 import sys
 import threading
@@ -51,6 +52,10 @@ class MenuItem:
 
     def titles(self) -> list:
         return [c.title for c in self.children if c is not None]
+
+    @property
+    def hidden(self) -> bool:
+        return self._menuitem.hidden
 
 
 class Timer:
@@ -158,9 +163,14 @@ def harness(monkeypatch, config_dir, fake_api, central_time):
     import sportsbar.mlb
     import sportsbar.weather
 
+    import sportsbar.espn_follow
+
     for mod in (sportsbar.config, sportsbar.mlb, sportsbar.weather, app_module):
         monkeypatch.setattr(mod, "now_local", lambda: FROZEN_NOW)
     monkeypatch.setattr(app_module, "CONFIG_PATH", config_dir / "config.yaml")
+    # ESPN follower clock: the same moment, as an aware UTC time
+    frozen_utc = FROZEN_NOW.astimezone(dt.timezone.utc)
+    monkeypatch.setattr(sportsbar.espn_follow, "_now", lambda: frozen_utc)
 
     apps = []
 
@@ -309,7 +319,7 @@ def test_check_updates_runs_in_background(harness, monkeypatch):
 def test_menus_are_labelled_for_the_favorite_team(harness):
     app = harness.make_app()
     harness.tick(app)
-    assert app.team_menu.title == "⭐ Favorite Team: Astros"
+    assert app.team_menu.title == "⭐ Favorite MLB Team: Astros"
     assert app.notif_scoring_plays.title == "Astros Scoring Plays"
     assert app.team_items[117].state == 1
     assert sum(item.state for item in app.team_items.values()) == 1
@@ -340,7 +350,7 @@ def test_picking_a_team_switches_everything(harness):
     assert app.top_line_4.title == "TV: ROOT Sports NW"
     assert app.plays_menu.titles()[1].startswith("⭐ ▼4")  # SEA's runs starred
     assert not app.plays_menu.titles()[0].startswith("⭐")
-    assert app.team_menu.title == "⭐ Favorite Team: Mariners"
+    assert app.team_menu.title == "⭐ Favorite MLB Team: Mariners"
     assert app.notif_scoring_plays.title == "Mariners Scoring Plays"
     assert app.team_items[136].state == 1 and app.team_items[117].state == 0
     assert "Mariners on MLB.com" in app.links_menu.titles()
@@ -371,7 +381,7 @@ def test_refresh_now_picks_up_edited_favorites(harness):
     app.manual_refresh(None)
     harness.loop.pump(app)
     assert app.team.abbr == "SEA"
-    assert app.team_menu.title == "⭐ Favorite Team: Mariners"
+    assert app.team_menu.title == "⭐ Favorite MLB Team: Mariners"
 
 
 def test_extra_favorites_are_starred_on_scoreboard(harness):
@@ -427,3 +437,146 @@ def test_duplicate_ticks_while_busy_are_dropped(harness):
     harness.loop.pump(app)
     schedule_calls = [u for u, _ in harness.api.calls if "teamId=" in u]
     assert len(schedule_calls) == 2  # full refresh + one primary tick
+
+
+# --- other leagues (ESPN) ----------------------------------------------------------
+
+NFL_ONLY = [{"league": "nfl", "team": "HOU"}]
+
+
+def mlb_calls(harness):
+    return [u for u, _ in harness.api.calls if "statsapi.mlb.com" in u]
+
+
+def test_football_only_hides_baseball(harness):
+    app = harness.make_app(favorites=NFL_ONLY)
+    harness.tick(app)
+
+    assert mlb_calls(harness) == []  # nothing fetched for baseball
+    assert {t for _, t in harness.api.calls} == {"sportsbar-worker"}
+    for item in (app.top_line_1, app.todays_game_menu, app.lineup_menu, app.scores_menu,
+                 app.magic_menu, app.game_text_item):
+        assert item.hidden
+    assert app.team_menu.title == "⭐ Favorite MLB Team: None"
+    assert app.no_mlb_item.state == 1
+
+    # Texans live at Jacksonville: title, headline row, team menu
+    assert app.title == "🏈 21-17 Q3"
+    assert app.status_button.attributed.attrs["color"] == "green"
+    assert app.espn_rows[0].title == "🏈 HOU 21 — JAX 17   Q3 4:12"
+    assert not app.espn_rows[0].hidden and app.espn_rows[1].hidden
+    menu = app.espn_menus[0]
+    assert menu.title == "🏈 Texans  — Live" and not menu.hidden
+    assert all(m.hidden for m in app.espn_menus[1:])
+    titles = menu.titles()
+    assert titles[:3] == ["HOU 21 — JAX 17   Q3 4:12", "JAX ball · 2nd & 7 at HOU 35", "TV: Prime Video"]
+    assert "Last play: T.Etienne run for 4 yards" in titles
+    assert "🔗 Texans on ESPN" in titles
+    schedule = next(c for c in menu.children if c is not None and c.title == "📅 Schedule")
+    assert schedule.titles()[:2] == ["L 9-14  @ LAR", "W 20-19  vs TB"]
+    box = [c for c in menu.children if c is not None and c._menuitem.attributed]
+    assert box[1]._menuitem.attributed.text == "HOU   7   7   7        21"
+
+    # League scoreboards: NFL shown, college and MLB hidden
+    nfl_scores = app.espn_score_menus["nfl"]
+    assert not nfl_scores.hidden and app.espn_score_menus["ncaaf"].hidden
+    assert "   ⭐ HOU 21 — JAX 17   Q3 4:12" in nfl_scores.titles()
+    assert app.primary_timer.interval == 60  # a favorite is live
+    assert "Texans on ESPN" in app.links_menu.titles()
+    assert "Astros on MLB.com" not in app.links_menu.titles()
+
+
+def test_first_favorite_wins_the_title(harness):
+    both = [{"league": "mlb", "team": "HOU"}, {"league": "nfl", "team": "HOU"}]
+    app = harness.make_app(favorites=both)
+    harness.tick(app)
+    assert app.title == "3-2 ▼7"  # Astros listed first (both live)
+    assert app.espn_rows[0].title == "🏈 HOU 21 — JAX 17   Q3 4:12"
+    assert not app.todays_game_menu.hidden
+
+    app = harness.make_app(favorites=list(reversed(both)))
+    harness.tick(app)
+    assert app.title == "🏈 21-17 Q3"
+
+
+def test_live_favorite_beats_an_idle_one(harness):
+    app = harness.make_app(favorites=[{"league": "nfl", "team": "DAL"}, {"league": "mlb", "team": "HOU"}])
+    harness.tick(app)
+    assert app.title == "3-2 ▼7"  # Cowboys don't play until Sunday
+
+
+def test_idle_icon_follows_first_favorite(harness):
+    harness.api.overrides["/football/nfl/scoreboard"] = {"events": []}
+    app = harness.make_app(favorites=[{"league": "nfl", "team": "DAL"}])
+    harness.tick(app)
+    assert app.title == "🏈"
+
+
+def test_football_scoring_notification(harness):
+    app = harness.make_app(favorites=NFL_ONLY, notifications={"scoring_plays": True})
+    harness.tick(app)
+    board = load_fixture("espn_nfl_scoreboard.json")
+    comp = board["events"][0]["competitions"][0]
+    next(c for c in comp["competitors"] if c["homeAway"] == "away")["score"] = "28"
+    harness.api.overrides["/football/nfl/scoreboard"] = board
+    harness.tick(app)
+    assert ("Texans Score!", "HOU 28 — JAX 17   Q3 4:12") in harness.notifications
+    assert app.title == "🏈 28-17 Q3"
+
+
+def test_college_scoreboard_shows_ranked_games_by_default(harness):
+    app = harness.make_app(favorites=[{"league": "ncaaf", "team": "Texas"}])
+    harness.tick(app)
+    scores = app.espn_score_menus["ncaaf"].titles()
+    assert "   #12 UGA @ #7 TEX   Sat 7:30 PM" in [s.replace("⭐ ", "") for s in scores]
+    assert "   ⭐ #12 UGA @ #7 TEX   Sat 7:30 PM" in scores
+    assert "   RUTG 10 — #1 OSU 38   F" in scores
+    assert not any("ARMY" in s or "TTU" in s for s in scores)  # unranked
+    assert scores[-1] == "Showing ranked teams and your favorites"
+    # Texas plays Saturday: not a "today" headline, but its menu is ready
+    assert all(r.hidden for r in app.espn_rows)
+    assert app.espn_menus[0].titles()[0] == "Texas vs #12 UGA  |  Sat 7:30 PM"
+
+
+def test_college_scoreboard_all_games_option(harness):
+    app = harness.make_app(
+        favorites=[{"league": "ncaaf", "team": "TEX"}],
+        leagues={"ncaaf": {"scoreboard": "all"}},
+    )
+    harness.tick(app)
+    scores = app.espn_score_menus["ncaaf"].titles()
+    assert any("ARMY @ NAVY" in s for s in scores)
+    assert any("HOU 10 — TTU 14   Half" in s for s in scores)
+
+
+def test_unknown_football_team_is_flagged(harness):
+    app = harness.make_app(favorites=[{"league": "ncaaf", "team": "Tigers"}])
+    harness.tick(app)
+    assert app.espn_menus[0].titles() == [
+        "⚠️ No College Football team matches “Tigers” — check favorites in the config"
+    ]
+
+
+def test_unfollow_mlb_from_the_picker(harness):
+    app = harness.make_app(favorites=[{"league": "mlb", "team": "HOU"}, *NFL_ONLY])
+    harness.tick(app)
+    assert not app.todays_game_menu.hidden
+    app.unfollow_mlb(None)
+    harness.loop.pump(app)
+    saved = yaml.safe_load((harness.config_dir / "config.yaml").read_text())
+    assert saved["favorites"] == NFL_ONLY
+    assert app.todays_game_menu.hidden and app.title == "🏈 21-17 Q3"
+    # Picking a team turns baseball back on
+    app.select_team(app.team_items[117])
+    harness.loop.pump(app)
+    assert not app.todays_game_menu.hidden
+    assert app.title == "🏈 21-17 Q3"  # NFL is still listed first
+
+
+def test_espn_cache_fills_menus_before_first_refresh(harness):
+    app = harness.make_app(favorites=NFL_ONLY)
+    harness.tick(app)
+    harness.api.fail = True
+    relaunched = harness.make_app(favorites=NFL_ONLY)
+    relaunched.update_espn_menus()
+    assert relaunched.espn_menus[0].titles()[0] == "HOU 21 — JAX 17   Q3 4:12"

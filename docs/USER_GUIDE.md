@@ -3,8 +3,9 @@
 Everything the app does, menu by menu.
 
 The app follows the **Houston Astros** out of the box, but it works for any
-MLB team — pick yours under ⚙️ Settings → **⭐ Favorite Team**. Wherever this
-guide says "Astros", read "your team".
+MLB team — pick yours under ⚙️ Settings → **⭐ Favorite MLB Team**. Wherever
+this guide says "Astros", read "your team". It can also follow **NFL and
+college football** teams — see [🏈 Football](#-football-nfl--college).
 
 <p align="center">
   <img src="screenshot.png" alt="Astros Menu Bar on game day" width="420">
@@ -116,6 +117,56 @@ guarantees the prize — when it hits zero you'll see **✅ CLINCHED** (or
 **✗ Eliminated** if a race slips away). Numbers ignore tiebreakers, same as
 the ones published on MLB.com.
 
+## 🏈 Football (NFL & college)
+
+Add NFL or college football teams to `favorites` in the config (⚙️ Settings
+→ **Edit Config**, then **🔄 Refresh Now**):
+
+```yaml
+favorites:
+  - league: nfl
+    team: HOU          # Texans
+  - league: ncaaf
+    team: Texas        # Longhorns
+  - league: mlb
+    team: HOU          # Astros — or leave MLB out entirely
+```
+
+Name teams by abbreviation (`HOU`, `TEX`), full name (`Texas Longhorns`),
+short name (`Texas`), or nickname (`Texans`). If a name fits more than one
+school — "Tigers" — the team's menu says so; use its abbreviation instead.
+
+Each football team gets:
+
+- **A line at the top of the menu** on game day — kickoff time before the
+  game, the live score and quarter during it, the final after
+- **Its own submenu** (🏈 Texans) — matchup, records, TV, and stadium
+  before kickoff; score, quarter and clock, possession, down and distance,
+  red zone, and the last play while live; a quarter-by-quarter line score;
+  a **📅 Schedule** with results (`W 27-13  vs IND`) and upcoming games; and
+  a link to the team's ESPN page
+- **The menu bar score** when it's playing: <code>🏈 21-17 Q3</code>,
+  colored like baseball (green winning, red losing, yellow tied) and held
+  30 minutes after the final
+
+**🏈 NFL Scores** and **🏈 College Football Scores** list the week's games
+(live, completed, upcoming), with college poll ranks (`#7 TEX`). The college
+scoreboard shows ranked teams and your favorites; to see every FBS game, add:
+
+```yaml
+leagues:
+  ncaaf:
+    scoreboard: all
+```
+
+**When several favorites play at once**, the menu bar shows the first one in
+your `favorites` list that's live, so list them in the order you care about.
+If you don't list an MLB team, the baseball menus disappear.
+
+Game starting, final score, and scoring notifications work for football too,
+using the same toggles. Football standings, odds, and weather aren't
+available yet.
+
 ## 💰 Vegas Odds
 
 Moneyline, run line, and over/under for the Astros game (DraftKings lines).
@@ -160,12 +211,14 @@ Forces an immediate refresh of everything. The app already refreshes itself
 
 ## ⚙️ Settings
 
-### ⭐ Favorite Team
+### ⭐ Favorite MLB Team
 
-Pick the team the whole app follows: **American League / National League →
+Pick the MLB team the app follows: **American League / National League →
 division → team**. The checkmark shows your current team. Switching reloads
 everything — schedule, live game, lineup, magic numbers, odds, weather,
-links, and the Game Text lines — for the new team right away.
+links, and the Game Text lines — for the new team right away. Choose
+**None — don't follow MLB** to hide the baseball menus (football fans).
+Football teams are set in the config (see [🏈 Football](#-football-nfl--college)).
 
 ### Notifications
 
@@ -198,11 +251,18 @@ Opens the config file in your default editor. Everything in it:
 ```yaml
 # ~/.config/astros-menubar/config.yaml
 odds_api_key: ""            # from the-odds-api.com (free) — enables Vegas Odds
-favorites:                  # first MLB team = the one the app follows
-  - league: mlb
+favorites:                  # in priority order for the menu bar score
+  - league: mlb             # first MLB team = the one the app follows
     team: HOU               # abbreviation, full name, or nickname
-  - league: mlb             # any others are starred on 🌎 MLB Scores
+  - league: mlb             # other MLB teams are starred on 🌎 MLB Scores
     team: Dodgers
+  - league: nfl             # NFL and college football (ncaaf) teams
+    team: Texans
+  - league: ncaaf
+    team: Texas
+leagues:
+  ncaaf:
+    scoreboard: top25       # or "all" for every FBS game
 notifications:
   game_starting: true
   final_score: true
@@ -257,5 +317,6 @@ rm -rf ~/.config/astros-menubar ~/Library/LaunchAgents/com.gyndok.astros-menubar
 | Standings, team & pitcher stats | MLB Stats API | every 2 hours |
 | Vegas odds | [The Odds API](https://the-odds-api.com) (free key) | every 2 hours |
 | Weather | [Open-Meteo](https://open-meteo.com) (free) | every 2 hours |
+| NFL & college football scores, schedules | ESPN's public site API (free, no key) | 60s while live, 15–30 min otherwise; schedules every 2 hours |
 
 Not affiliated with MLB or the Houston Astros. Go Stros. 🚀
