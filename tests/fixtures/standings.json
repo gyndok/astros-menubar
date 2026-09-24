@@ -1,0 +1,505 @@
+{
+ "records": [
+  {
+   "division": {
+    "id": 200
+   },
+   "teamRecords": [
+    {
+     "team": {
+      "id": 117,
+      "name": "Houston Astros"
+     },
+     "leagueRecord": {
+      "wins": 88,
+      "losses": 67
+     },
+     "winningPercentage": ".568",
+     "gamesBack": "-",
+     "divisionRank": "1",
+     "leagueRank": "3",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": true,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "-",
+     "magicNumber": "5"
+    },
+    {
+     "team": {
+      "id": 136,
+      "name": "Seattle Mariners"
+     },
+     "leagueRecord": {
+      "wins": 86,
+      "losses": 69
+     },
+     "winningPercentage": ".555",
+     "gamesBack": "2.0",
+     "divisionRank": "2",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "+1.0",
+     "wildCardRank": "2"
+    },
+    {
+     "team": {
+      "id": 140,
+      "name": "Texas Rangers"
+     },
+     "leagueRecord": {
+      "wins": 80,
+      "losses": 75
+     },
+     "winningPercentage": ".516",
+     "gamesBack": "8.0",
+     "divisionRank": "3",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "5.0",
+     "wildCardRank": "5"
+    },
+    {
+     "team": {
+      "id": 133,
+      "name": "Athletics"
+     },
+     "leagueRecord": {
+      "wins": 72,
+      "losses": 83
+     },
+     "winningPercentage": ".465",
+     "gamesBack": "16.0",
+     "divisionRank": "4",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "13.0",
+     "wildCardRank": "8"
+    },
+    {
+     "team": {
+      "id": 144,
+      "name": "Los Angeles Angels"
+     },
+     "leagueRecord": {
+      "wins": 70,
+      "losses": 85
+     },
+     "winningPercentage": ".452",
+     "gamesBack": "18.0",
+     "divisionRank": "5",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "15.0",
+     "wildCardRank": "9",
+     "eliminationNumber": "E",
+     "wildCardEliminationNumber": "E"
+    }
+   ]
+  },
+  {
+   "division": {
+    "id": 201
+   },
+   "teamRecords": [
+    {
+     "team": {
+      "id": 147,
+      "name": "New York Yankees"
+     },
+     "leagueRecord": {
+      "wins": 90,
+      "losses": 65
+     },
+     "winningPercentage": ".581",
+     "gamesBack": "-",
+     "divisionRank": "1",
+     "leagueRank": "1",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": true,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "-"
+    },
+    {
+     "team": {
+      "id": 141,
+      "name": "Toronto Blue Jays"
+     },
+     "leagueRecord": {
+      "wins": 89,
+      "losses": 66
+     },
+     "winningPercentage": ".574",
+     "gamesBack": "1.0",
+     "divisionRank": "2",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "+3.0",
+     "wildCardRank": "1"
+    },
+    {
+     "team": {
+      "id": 111,
+      "name": "Boston Red Sox"
+     },
+     "leagueRecord": {
+      "wins": 85,
+      "losses": 70
+     },
+     "winningPercentage": ".548",
+     "gamesBack": "5.0",
+     "divisionRank": "3",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "-",
+     "wildCardRank": "3"
+    },
+    {
+     "team": {
+      "id": 139,
+      "name": "Tampa Bay Rays"
+     },
+     "leagueRecord": {
+      "wins": 77,
+      "losses": 78
+     },
+     "winningPercentage": ".497",
+     "gamesBack": "13.0",
+     "divisionRank": "4",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "6.0",
+     "wildCardRank": "6"
+    },
+    {
+     "team": {
+      "id": 110,
+      "name": "Baltimore Orioles"
+     },
+     "leagueRecord": {
+      "wins": 72,
+      "losses": 83
+     },
+     "winningPercentage": ".465",
+     "gamesBack": "18.0",
+     "divisionRank": "5",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "11.0",
+     "wildCardRank": "7"
+    }
+   ]
+  },
+  {
+   "division": {
+    "id": 202
+   },
+   "teamRecords": [
+    {
+     "team": {
+      "id": 146,
+      "name": "Detroit Tigers"
+     },
+     "leagueRecord": {
+      "wins": 87,
+      "losses": 68
+     },
+     "winningPercentage": ".561",
+     "gamesBack": "-",
+     "divisionRank": "1",
+     "leagueRank": "2",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": true,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "-"
+    },
+    {
+     "team": {
+      "id": 115,
+      "name": "Cleveland Guardians"
+     },
+     "leagueRecord": {
+      "wins": 83,
+      "losses": 72
+     },
+     "winningPercentage": ".535",
+     "gamesBack": "4.0",
+     "divisionRank": "2",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "2.0",
+     "wildCardRank": "4"
+    },
+    {
+     "team": {
+      "id": 118,
+      "name": "Kansas City Royals"
+     },
+     "leagueRecord": {
+      "wins": 80,
+      "losses": 75
+     },
+     "winningPercentage": ".516",
+     "gamesBack": "7.0",
+     "divisionRank": "3",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "5.0",
+     "wildCardRank": "5"
+    },
+    {
+     "team": {
+      "id": 142,
+      "name": "Minnesota Twins"
+     },
+     "leagueRecord": {
+      "wins": 68,
+      "losses": 87
+     },
+     "winningPercentage": ".439",
+     "gamesBack": "19.0",
+     "divisionRank": "4",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "17.0",
+     "wildCardRank": "10"
+    },
+    {
+     "team": {
+      "id": 113,
+      "name": "Chicago White Sox"
+     },
+     "leagueRecord": {
+      "wins": 58,
+      "losses": 97
+     },
+     "winningPercentage": ".374",
+     "gamesBack": "29.0",
+     "divisionRank": "5",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "27.0",
+     "wildCardRank": "11"
+    }
+   ]
+  },
+  {
+   "division": {
+    "id": 203
+   },
+   "teamRecords": [
+    {
+     "team": {
+      "id": 119,
+      "name": "Los Angeles Dodgers"
+     },
+     "leagueRecord": {
+      "wins": 91,
+      "losses": 64
+     },
+     "winningPercentage": ".587",
+     "gamesBack": "-",
+     "divisionRank": "1",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": true,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "-"
+    },
+    {
+     "team": {
+      "id": 135,
+      "name": "San Diego Padres"
+     },
+     "leagueRecord": {
+      "wins": 86,
+      "losses": 69
+     },
+     "winningPercentage": ".555",
+     "gamesBack": "5.0",
+     "divisionRank": "2",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "+2.0",
+     "wildCardRank": "2"
+    }
+   ]
+  },
+  {
+   "division": {
+    "id": 204
+   },
+   "teamRecords": [
+    {
+     "team": {
+      "id": 143,
+      "name": "Philadelphia Phillies"
+     },
+     "leagueRecord": {
+      "wins": 92,
+      "losses": 63
+     },
+     "winningPercentage": ".594",
+     "gamesBack": "-",
+     "divisionRank": "1",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": true,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "-"
+    },
+    {
+     "team": {
+      "id": 145,
+      "name": "New York Mets"
+     },
+     "leagueRecord": {
+      "wins": 82,
+      "losses": 73
+     },
+     "winningPercentage": ".529",
+     "gamesBack": "10.0",
+     "divisionRank": "2",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "-",
+     "wildCardRank": "3"
+    }
+   ]
+  },
+  {
+   "division": {
+    "id": 205
+   },
+   "teamRecords": [
+    {
+     "team": {
+      "id": 158,
+      "name": "Milwaukee Brewers"
+     },
+     "leagueRecord": {
+      "wins": 95,
+      "losses": 60
+     },
+     "winningPercentage": ".613",
+     "gamesBack": "-",
+     "divisionRank": "1",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": true,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "-"
+    },
+    {
+     "team": {
+      "id": 112,
+      "name": "Chicago Cubs"
+     },
+     "leagueRecord": {
+      "wins": 88,
+      "losses": 67
+     },
+     "winningPercentage": ".568",
+     "gamesBack": "7.0",
+     "divisionRank": "2",
+     "leagueRank": "",
+     "streak": {
+      "streakCode": "W1"
+     },
+     "divisionLeader": false,
+     "clinched": false,
+     "divisionChamp": false,
+     "wildCardGamesBack": "+4.0",
+     "wildCardRank": "1"
+    }
+   ]
+  }
+ ]
+}

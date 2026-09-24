@@ -1,0 +1,179 @@
+{
+ "dates": [
+  {
+   "date": "2026-09-24",
+   "games": [
+    {
+     "gamePk": 800001,
+     "gameDate": "2026-09-24T23:10:00Z",
+     "officialDate": "2026-09-24",
+     "status": {
+      "abstractGameState": "Live",
+      "detailedState": "In Progress"
+     },
+     "teams": {
+      "away": {
+       "team": {
+        "id": 117,
+        "name": "Houston Astros",
+        "abbreviation": "HOU"
+       },
+       "leagueRecord": {
+        "wins": 88,
+        "losses": 67,
+        "pct": ""
+       },
+       "score": 3,
+       "probablePitcher": {
+        "id": 664285,
+        "fullName": "Framber Valdez"
+       }
+      },
+      "home": {
+       "team": {
+        "id": 136,
+        "name": "Seattle Mariners",
+        "abbreviation": "SEA"
+       },
+       "leagueRecord": {
+        "wins": 86,
+        "losses": 69,
+        "pct": ""
+       },
+       "score": 2,
+       "probablePitcher": {
+        "id": 669302,
+        "fullName": "Logan Gilbert"
+       }
+      }
+     },
+     "venue": {
+      "id": 680,
+      "name": "T-Mobile Park"
+     },
+     "broadcasts": [
+      {
+       "type": "TV",
+       "name": "ROOT Sports NW"
+      },
+      {
+       "type": "TV",
+       "name": "Space City Home Network"
+      },
+      {
+       "type": "AM",
+       "name": "SportsTalk 790"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-09-25",
+   "games": [
+    {
+     "gamePk": 800002,
+     "gameDate": "2026-09-26T00:05:00Z",
+     "officialDate": "2026-09-25",
+     "status": {
+      "abstractGameState": "Preview",
+      "detailedState": "Scheduled"
+     },
+     "teams": {
+      "away": {
+       "team": {
+        "id": 140,
+        "name": "Texas Rangers",
+        "abbreviation": "TEX"
+       },
+       "leagueRecord": {
+        "wins": 80,
+        "losses": 75,
+        "pct": ""
+       },
+       "probablePitcher": {
+        "id": 676664,
+        "fullName": "Nathan Eovaldi"
+       }
+      },
+      "home": {
+       "team": {
+        "id": 117,
+        "name": "Houston Astros",
+        "abbreviation": "HOU"
+       },
+       "leagueRecord": {
+        "wins": 88,
+        "losses": 67,
+        "pct": ""
+       },
+       "probablePitcher": {
+        "id": 675911,
+        "fullName": "Hunter Brown"
+       }
+      }
+     },
+     "venue": {
+      "id": 2392,
+      "name": "Daikin Park"
+     },
+     "broadcasts": [
+      {
+       "type": "TV",
+       "name": "Space City Home Network"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-09-26",
+   "games": [
+    {
+     "gamePk": 800003,
+     "gameDate": "2026-09-26T23:10:00Z",
+     "officialDate": "2026-09-26",
+     "status": {
+      "abstractGameState": "Preview",
+      "detailedState": "Scheduled"
+     },
+     "teams": {
+      "away": {
+       "team": {
+        "id": 140,
+        "name": "Texas Rangers",
+        "abbreviation": "TEX"
+       },
+       "leagueRecord": {
+        "wins": 80,
+        "losses": 75,
+        "pct": ""
+       }
+      },
+      "home": {
+       "team": {
+        "id": 117,
+        "name": "Houston Astros",
+        "abbreviation": "HOU"
+       },
+       "leagueRecord": {
+        "wins": 88,
+        "losses": 67,
+        "pct": ""
+       },
+       "probablePitcher": {
+        "id": 664285,
+        "fullName": "Framber Valdez"
+       }
+      }
+     },
+     "venue": {
+      "id": 2392,
+      "name": "Daikin Park"
+     },
+     "broadcasts": []
+    }
+   ]
+  }
+ ]
+}

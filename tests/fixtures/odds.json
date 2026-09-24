@@ -1,0 +1,67 @@
+[
+ {
+  "id": "abc",
+  "sport_key": "baseball_mlb",
+  "commence_time": "2026-09-24T21:10:00Z",
+  "home_team": "New York Yankees",
+  "away_team": "Boston Red Sox",
+  "bookmakers": []
+ },
+ {
+  "id": "def",
+  "sport_key": "baseball_mlb",
+  "commence_time": "2026-09-24T23:10:00Z",
+  "home_team": "Seattle Mariners",
+  "away_team": "Houston Astros",
+  "bookmakers": [
+   {
+    "key": "draftkings",
+    "markets": [
+     {
+      "key": "h2h",
+      "outcomes": [
+       {
+        "name": "Houston Astros",
+        "price": 120
+       },
+       {
+        "name": "Seattle Mariners",
+        "price": -142
+       }
+      ]
+     },
+     {
+      "key": "spreads",
+      "outcomes": [
+       {
+        "name": "Houston Astros",
+        "price": -170,
+        "point": 1.5
+       },
+       {
+        "name": "Seattle Mariners",
+        "price": 145,
+        "point": -1.5
+       }
+      ]
+     },
+     {
+      "key": "totals",
+      "outcomes": [
+       {
+        "name": "Over",
+        "price": -110,
+        "point": 7.5
+       },
+       {
+        "name": "Under",
+        "price": -110,
+        "point": 7.5
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+]

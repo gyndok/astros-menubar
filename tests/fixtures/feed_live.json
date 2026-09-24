@@ -1,0 +1,236 @@
+{
+ "gamePk": 800001,
+ "gameData": {
+  "teams": {
+   "away": {
+    "id": 117,
+    "abbreviation": "HOU",
+    "name": "Houston Astros"
+   },
+   "home": {
+    "id": 136,
+    "abbreviation": "SEA",
+    "name": "Seattle Mariners"
+   }
+  },
+  "status": {
+   "abstractGameState": "Live",
+   "detailedState": "In Progress"
+  }
+ },
+ "liveData": {
+  "linescore": {
+   "currentInning": 7,
+   "currentInningOrdinal": "7th",
+   "isTopInning": false,
+   "innings": [
+    {
+     "num": 1,
+     "away": {
+      "runs": 0,
+      "hits": 0,
+      "errors": 0
+     },
+     "home": {
+      "runs": 0,
+      "hits": 0,
+      "errors": 0
+     }
+    },
+    {
+     "num": 2,
+     "away": {
+      "runs": 1,
+      "hits": 0,
+      "errors": 0
+     },
+     "home": {
+      "runs": 0,
+      "hits": 0,
+      "errors": 0
+     }
+    },
+    {
+     "num": 3,
+     "away": {
+      "runs": 0,
+      "hits": 0,
+      "errors": 0
+     },
+     "home": {
+      "runs": 0,
+      "hits": 0,
+      "errors": 0
+     }
+    },
+    {
+     "num": 4,
+     "away": {
+      "runs": 0,
+      "hits": 0,
+      "errors": 0
+     },
+     "home": {
+      "runs": 1,
+      "hits": 0,
+      "errors": 0
+     }
+    },
+    {
+     "num": 5,
+     "away": {
+      "runs": 0,
+      "hits": 0,
+      "errors": 0
+     },
+     "home": {
+      "runs": 1,
+      "hits": 0,
+      "errors": 0
+     }
+    },
+    {
+     "num": 6,
+     "away": {
+      "runs": 2,
+      "hits": 0,
+      "errors": 0
+     },
+     "home": {
+      "runs": 0,
+      "hits": 0,
+      "errors": 0
+     }
+    },
+    {
+     "num": 7,
+     "away": {
+      "runs": 0,
+      "hits": 0,
+      "errors": 0
+     },
+     "home": {}
+    }
+   ],
+   "teams": {
+    "away": {
+     "runs": 3,
+     "hits": 7,
+     "errors": 0
+    },
+    "home": {
+     "runs": 2,
+     "hits": 5,
+     "errors": 1
+    }
+   },
+   "offense": {
+    "first": {
+     "id": 1,
+     "fullName": "Randy Arozarena"
+    },
+    "third": {
+     "id": 2,
+     "fullName": "Julio Rodriguez"
+    }
+   }
+  },
+  "plays": {
+   "allPlays": [
+    {
+     "about": {
+      "inning": 1,
+      "halfInning": "top",
+      "isScoringPlay": false
+     },
+     "result": {
+      "awayScore": 0,
+      "homeScore": 0,
+      "description": "Jose Altuve grounds out to shortstop."
+     }
+    },
+    {
+     "about": {
+      "inning": 2,
+      "halfInning": "top",
+      "isScoringPlay": true
+     },
+     "result": {
+      "awayScore": 1,
+      "homeScore": 0,
+      "description": "Yainer Diaz homers (18) on a fly ball to left field."
+     }
+    },
+    {
+     "about": {
+      "inning": 4,
+      "halfInning": "bottom",
+      "isScoringPlay": true
+     },
+     "result": {
+      "awayScore": 1,
+      "homeScore": 1,
+      "description": "Julio Rodriguez doubles (30) on a line drive to left field.   Cal Raleigh scores."
+     }
+    },
+    {
+     "about": {
+      "inning": 5,
+      "halfInning": "bottom",
+      "isScoringPlay": true
+     },
+     "result": {
+      "awayScore": 1,
+      "homeScore": 2,
+      "description": "Cal Raleigh homers (52) on a fly ball to right field."
+     }
+    },
+    {
+     "about": {
+      "inning": 6,
+      "halfInning": "top",
+      "isScoringPlay": true
+     },
+     "result": {
+      "awayScore": 3,
+      "homeScore": 2,
+      "description": "Yordan Alvarez singles on a line drive to center field.   Jose Altuve scores.   Isaac Paredes scores."
+     }
+    },
+    {
+     "about": {
+      "inning": 7,
+      "halfInning": "bottom",
+      "isScoringPlay": false
+     },
+     "result": {
+      "awayScore": 3,
+      "homeScore": 2,
+      "description": "J.P. Crawford strikes out swinging."
+     }
+    }
+   ],
+   "scoringPlays": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "currentPlay": {
+    "count": {
+     "balls": 2,
+     "strikes": 1,
+     "outs": 1
+    },
+    "matchup": {
+     "pitcher": {
+      "fullName": "Bryan Abreu"
+     },
+     "batter": {
+      "fullName": "Cal Raleigh"
+     }
+    }
+   }
+  }
+ }
+}

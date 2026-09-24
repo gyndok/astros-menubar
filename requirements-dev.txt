@@ -1,0 +1,5 @@
+# Test dependencies. The tests stub out rumps/AppKit, so these install
+# (and the suite runs) on any OS, including Linux CI.
+requests>=2.28.0
+pyyaml>=6.0
+pytest>=7.0

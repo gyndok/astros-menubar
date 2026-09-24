@@ -1,0 +1,112 @@
+{
+ "teams": {
+  "away": {
+   "team": {
+    "id": 117,
+    "name": "Houston Astros"
+   },
+   "battingOrder": [
+    514888,
+    672275,
+    670541,
+    673237,
+    663656,
+    676801,
+    686613,
+    680700,
+    678489
+   ],
+   "players": {
+    "ID514888": {
+     "person": {
+      "id": 514888,
+      "fullName": "Jose Altuve"
+     },
+     "position": {
+      "abbreviation": "2B"
+     }
+    },
+    "ID672275": {
+     "person": {
+      "id": 672275,
+      "fullName": "Isaac Paredes"
+     },
+     "position": {
+      "abbreviation": "3B"
+     }
+    },
+    "ID670541": {
+     "person": {
+      "id": 670541,
+      "fullName": "Yordan Alvarez"
+     },
+     "position": {
+      "abbreviation": "DH"
+     }
+    },
+    "ID673237": {
+     "person": {
+      "id": 673237,
+      "fullName": "Yainer Diaz"
+     },
+     "position": {
+      "abbreviation": "C"
+     }
+    },
+    "ID663656": {
+     "person": {
+      "id": 663656,
+      "fullName": "Christian Walker"
+     },
+     "position": {
+      "abbreviation": "1B"
+     }
+    },
+    "ID676801": {
+     "person": {
+      "id": 676801,
+      "fullName": "Jake Meyers"
+     },
+     "position": {
+      "abbreviation": "CF"
+     }
+    },
+    "ID686613": {
+     "person": {
+      "id": 686613,
+      "fullName": "Cam Smith"
+     },
+     "position": {
+      "abbreviation": "RF"
+     }
+    },
+    "ID680700": {
+     "person": {
+      "id": 680700,
+      "fullName": "Jeremy Pena"
+     },
+     "position": {
+      "abbreviation": "SS"
+     }
+    },
+    "ID678489": {
+     "person": {
+      "id": 678489,
+      "fullName": "Zach Dezenzo"
+     },
+     "position": {
+      "abbreviation": "LF"
+     }
+    }
+   }
+  },
+  "home": {
+   "team": {
+    "id": 136,
+    "name": "Seattle Mariners"
+   },
+   "battingOrder": [],
+   "players": {}
+  }
+ }
+}
