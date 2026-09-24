@@ -15,7 +15,6 @@ from typing import Any, Dict, List, Optional
 
 import requests
 import rumps
-import yaml
 from AppKit import (
     NSAttributedString,
     NSColor,
@@ -30,15 +29,15 @@ from .config import (
     APP_VERSION,
     CONFIG_PATH,
     GITHUB_REPO,
-    ensure_paths,
     load_config,
     now_local,
+    quick_links,
     read_cache,
+    save_config,
     write_cache,
 )
 from .gametext import generate_game_text
 from .mlb import (
-    ASTROS_TEAM_ID,
     DIVISIONS,
     LEAGUES,
     NON_GAME_STATES,
@@ -56,7 +55,7 @@ from .mlb import (
     format_league_game,
     format_line_score,
     format_record,
-    get_astros_side,
+    nickname,
     get_probable_pitcher,
     get_tv_broadcast,
     opponent_team_id,
@@ -64,18 +63,33 @@ from .mlb import (
     parse_lineup,
     parse_live_data,
     parse_scoring_plays,
+    team_side,
 )
 from .odds import fetch_odds, format_odds_price, parse_odds
+from .teams import (
+    DIVISION_NAMES,
+    LEAGUE_DIVISIONS,
+    MLB_TEAMS,
+    Team,
+    favorite_teams,
+    primary_team,
+    set_primary_team,
+)
 from .weather import fetch_weather
 from .worker import BackgroundWorker
 
 
-class AstrosMenuBarApp(rumps.App):
-    """Houston Astros macOS menu bar application."""
+# Caches written before favorites existed belong to the Astros.
+LEGACY_CACHE_TEAM = "mlb/HOU"
+
+
+class MenuBarApp(rumps.App):
+    """macOS menu bar app that follows your favorite team."""
 
     def __init__(self) -> None:
         super().__init__(APP_NAME, title="⚾")
         self.config = load_config()
+        self.team: Team = primary_team(self.config)
 
         # Data caches
         self.schedule_data: list = []
@@ -89,7 +103,7 @@ class AstrosMenuBarApp(rumps.App):
         self.odds_data: dict = {}
         self.weather_data: dict = {}
         self.team_stats: dict = {}
-        self.previous_astros_score: Optional[int] = None
+        self.previous_my_score: Optional[int] = None
         self.final_revert_time: Optional[dt.datetime] = None
         self._did_initial_refresh: bool = False
         self._starting_soon_pk: Optional[int] = None  # dedup "starting soon" notification
@@ -97,19 +111,20 @@ class AstrosMenuBarApp(rumps.App):
         self._lineup_seen_pk: Optional[int] = None    # dedup "lineup posted" notification
         self.pitcher_stats_cache: Dict[int, dict] = {}
 
-        # Load cached data from disk
-        self.schedule_data = read_cache("schedule").get("games", [])
+        # Load cached data from disk (team-specific caches only if they
+        # belong to the current team)
+        self.schedule_data = self._read_team_cache("schedule").get("games", [])
         self.league_scores: list = read_cache("league_scores").get("games", [])
         self.standings_data = read_cache("standings").get("records", [])
-        odds_cache = read_cache("odds")
+        odds_cache = self._read_team_cache("odds")
         if "event" in odds_cache:
             self.odds_data = odds_cache.get("event") or {}
             self._odds_fetched: str = odds_cache.get("fetched", "")
         else:  # legacy cache format: the raw event dict
             self.odds_data = odds_cache
             self._odds_fetched = ""
-        self.weather_data = read_cache("weather")
-        self.team_stats = read_cache("team_stats")
+        self.weather_data = self._read_team_cache("weather")
+        self.team_stats = self._read_team_cache("team_stats")
 
         self._build_menu()
 
@@ -190,12 +205,9 @@ class AstrosMenuBarApp(rumps.App):
         self.weather_menu = rumps.MenuItem("🌤 Ballpark Weather")
         self.weather_menu.update([rumps.MenuItem("Loading...")])
 
-        # Quick Links submenu
+        # Quick Links submenu (filled by _update_team_items)
         self.links_menu = rumps.MenuItem("🔗 Quick Links")
-        for link in self.config.get("quick_links", []):
-            item = rumps.MenuItem(link["name"], callback=self.open_link)
-            item._url = link["url"]
-            self.links_menu.update([item])
+        self.links_menu.update([rumps.MenuItem("Loading...")])
 
         # Team Stats submenu
         self.stats_menu = rumps.MenuItem("📊 Team Stats")
@@ -218,24 +230,47 @@ class AstrosMenuBarApp(rumps.App):
             "Final Score", callback=self.toggle_notification
         )
         self.notif_scoring_plays = rumps.MenuItem(
-            "Astros Scoring Plays", callback=self.toggle_notification
+            "Scoring Plays", callback=self.toggle_notification
         )
         self.notif_lineup_posted = rumps.MenuItem(
             "Lineup Posted", callback=self.toggle_notification
         )
-        notif_menu.update([
-            self.notif_game_starting,
-            self.notif_final_score,
-            self.notif_scoring_plays,
-            self.notif_lineup_posted,
-        ])
+        for item, key in (
+            (self.notif_game_starting, "game_starting"),
+            (self.notif_final_score, "final_score"),
+            (self.notif_scoring_plays, "scoring_plays"),
+            (self.notif_lineup_posted, "lineup_posted"),
+        ):
+            item._config_key = key
+            notif_menu.update([item])
         self._sync_notification_states()
+
+        # Favorite team picker: League → Division → Team
+        self.team_menu = rumps.MenuItem("⭐ Favorite Team")
+        self.team_items: Dict[int, rumps.MenuItem] = {}
+        for league_name, league_id in LEAGUES.items():
+            league_item = rumps.MenuItem(league_name)
+            for div_id in LEAGUE_DIVISIONS[league_id]:
+                div_item = rumps.MenuItem(DIVISION_NAMES[div_id])
+                for team in sorted(
+                    (t for t in MLB_TEAMS if t.division_id == div_id),
+                    key=lambda t: t.name,
+                ):
+                    team_item = rumps.MenuItem(team.name, callback=self.select_team)
+                    team_item._team = team
+                    self.team_items[team.id] = team_item
+                    div_item.update([team_item])
+                league_item.update([div_item])
+            self.team_menu.update([league_item])
 
         check_updates_item = rumps.MenuItem("Check for Updates…", callback=self.check_updates)
         edit_config_item = rumps.MenuItem("Edit Config", callback=self.edit_config)
         quit_item = rumps.MenuItem("Quit", callback=self.quit_app)
 
-        self.settings_menu.update([notif_menu, check_updates_item, edit_config_item, quit_item])
+        self.settings_menu.update([
+            self.team_menu, notif_menu, check_updates_item, edit_config_item, quit_item,
+        ])
+        self._update_team_items()
 
         self.menu = [
             self.top_line_1,
@@ -279,20 +314,81 @@ class AstrosMenuBarApp(rumps.App):
     def toggle_notification(self, sender: rumps.MenuItem) -> None:
         """Toggle a notification preference on/off."""
         sender.state = not sender.state
-        key_map = {
-            "Game Starting Soon": "game_starting",
-            "Final Score": "final_score",
-            "Astros Scoring Plays": "scoring_plays",
-            "Lineup Posted": "lineup_posted",
-        }
-        config_key = key_map.get(sender.title)
+        config_key = getattr(sender, "_config_key", None)
         if config_key:
             if not isinstance(self.config.get("notifications"), dict):
                 self.config["notifications"] = {}
             self.config["notifications"][config_key] = bool(sender.state)
-            ensure_paths()
-            with CONFIG_PATH.open("w", encoding="utf-8") as f:
-                yaml.safe_dump(self.config, f, sort_keys=False)
+            save_config(self.config)
+
+    # ------------------------------------------------------------------
+    # Favorite team
+    # ------------------------------------------------------------------
+
+    def select_team(self, sender: rumps.MenuItem) -> None:
+        """Team picker callback: make the chosen team the favorite."""
+        team = getattr(sender, "_team", None)
+        if team is None or team == self.team:
+            return
+        set_primary_team(self.config, team)
+        save_config(self.config)
+        # Show the pick right away; the data follows from the refresh.
+        for item in self.team_items.values():
+            item.state = int(item._team == team)
+        # Own job name, so it queues behind (not gets dropped by) a
+        # refresh that's already running.
+        self.worker.submit("switch_team", self._refresh_all_work, self._update_all_menus)
+
+    def _sync_team(self) -> None:
+        """Adopt the config's favorite team, resetting per-team state if it
+        changed. Runs on the worker thread at the start of a full refresh
+        (team picker, Refresh Now after editing the config)."""
+        team = primary_team(self.config)
+        if team == self.team:
+            return
+        logging.info("Favorite team changed: %s -> %s", self.team.key, team.key)
+        self.team = team
+        self.schedule_data = []
+        self.game_state = {"state": "off", "game": None, "game_pk": None}
+        self.live_data = {}
+        self.lineup_data = []
+        self.scoring_plays = []
+        self._plays_game_pk = None
+        self.line_score = {}
+        self.odds_data = {}
+        self._odds_fetched = ""
+        self.weather_data = {}
+        self.team_stats = {}
+        self.previous_my_score = None
+        self.final_revert_time = None
+        self._starting_soon_pk = None
+        self._score_watch_pk = None
+        self._lineup_seen_pk = None
+
+    def _update_team_items(self) -> None:
+        """Refresh menu items whose text depends on the favorite team."""
+        for team_id, item in self.team_items.items():
+            item.state = int(team_id == self.team.id)
+        self.team_menu.title = f"⭐ Favorite Team: {self.team.nickname}"
+        self.notif_scoring_plays.title = f"{self.team.nickname} Scoring Plays"
+        self.links_menu.clear()
+        for link in quick_links(self.config, self.team):
+            item = rumps.MenuItem(link.get("name", link["url"]), callback=self.open_link)
+            item._url = link["url"]
+            self.links_menu.update([item])
+
+    def _favorite_ids(self) -> set:
+        return {t.id for t in favorite_teams(self.config) if t.league == "mlb"} | {self.team.id}
+
+    def _read_team_cache(self, name: str) -> dict:
+        """Read a cache that belongs to one team — empty if it's another's."""
+        data = read_cache(name)
+        if data and data.get("team", LEGACY_CACHE_TEAM) != self.team.key:
+            return {}
+        return data
+
+    def _write_team_cache(self, name: str, payload: dict) -> None:
+        write_cache(name, {**payload, "team": self.team.key})
 
     # ------------------------------------------------------------------
     # Action callbacks
@@ -393,7 +489,9 @@ class AstrosMenuBarApp(rumps.App):
 
     def copy_game_text(self, _sender: Any) -> None:
         """Generate a witty game text and copy to clipboard."""
-        text = generate_game_text(self.game_state, self.live_data, self.schedule_data)
+        text = generate_game_text(
+            self.game_state, self.live_data, self.schedule_data, self.team
+        )
         try:
             subprocess.run(["pbcopy"], input=text.encode("utf-8"), check=True)
             rumps.notification(APP_NAME, "Game Text Copied! 📋", text)
@@ -446,7 +544,7 @@ class AstrosMenuBarApp(rumps.App):
     def update_title(self) -> None:
         """Set the menu bar title based on game state.
 
-        Live: the score, colored — '2-5 ▼7' in green (Astros winning),
+        Live: the score, colored — '2-5 ▼7' in green (your team winning),
         red (losing), or yellow (tied). Final: '2-5 F' colored by result,
         held for 30 minutes, then back to a plain ⚾. Otherwise: ⚾.
         """
@@ -454,14 +552,14 @@ class AstrosMenuBarApp(rumps.App):
         if state == "live":
             game = self.game_state.get("game")
             if game and self.live_data:
-                side = get_astros_side(game)
+                side = team_side(game, self.team.id)
                 ld = self.live_data
-                astros_runs = ld.get(f"{side}_runs", 0)
+                my_runs = ld.get(f"{side}_runs", 0)
                 opp_side = "home" if side == "away" else "away"
                 opp_runs = ld.get(f"{opp_side}_runs", 0)
-                if astros_runs > opp_runs:
+                if my_runs > opp_runs:
                     color = "green"
-                elif astros_runs < opp_runs:
+                elif my_runs < opp_runs:
                     color = "red"
                 else:
                     color = "yellow"
@@ -477,16 +575,16 @@ class AstrosMenuBarApp(rumps.App):
             else:
                 game = self.game_state.get("game")
                 if game:
-                    side = get_astros_side(game)
+                    side = team_side(game, self.team.id)
                     teams = game.get("teams", {})
-                    astros_score = teams.get(side, {}).get("score", 0) or 0
+                    my_score = teams.get(side, {}).get("score", 0) or 0
                     opp_side = "home" if side == "away" else "away"
                     opp_score = teams.get(opp_side, {}).get("score", 0) or 0
                     away_score = teams.get("away", {}).get("score", 0) or 0
                     home_score = teams.get("home", {}).get("score", 0) or 0
-                    if astros_score > opp_score:
+                    if my_score > opp_score:
                         color = "green"
-                    elif astros_score < opp_score:
+                    elif my_score < opp_score:
                         color = "red"
                     else:
                         color = "yellow"
@@ -504,7 +602,7 @@ class AstrosMenuBarApp(rumps.App):
 
         if state == "live" and game and self.live_data:
             ld = self.live_data
-            side = get_astros_side(game)
+            side = team_side(game, self.team.id)
             opp_side = "home" if side == "away" else "away"
             away_abbr = ld.get("away_abbr", "AWY")
             home_abbr = ld.get("home_abbr", "HME")
@@ -518,7 +616,7 @@ class AstrosMenuBarApp(rumps.App):
             runners = ld.get("runners", [])
             pitcher = ld.get("pitcher", "")
             batter = ld.get("batter", "")
-            tv = get_tv_broadcast(game)
+            tv = get_tv_broadcast(game, self.team.id)
             lines[0] = f"{away_abbr} {away_runs} — {home_abbr} {home_runs}  |  {half} {inning_ord}"
             lines[1] = f"Runners: {', '.join(runners) if runners else 'None'}  |  {balls}-{strikes}, {outs} out"
             lines[2] = f"P: {pitcher}  vs  B: {batter}"
@@ -526,32 +624,34 @@ class AstrosMenuBarApp(rumps.App):
             lines[4] = "—"
 
         elif state == "pre" and game:
-            side = get_astros_side(game)
+            side = team_side(game, self.team.id)
             opp_side = "home" if side == "away" else "away"
             opp_name = game["teams"][opp_side]["team"]["name"]
+            opp_nick = nickname(game["teams"][opp_side]["team"])
             game_time = format_game_time(game)
             at_symbol = "@" if side == "away" else "vs"
-            astros_rec = format_record(game, side)
+            my_rec = format_record(game, side)
             opp_rec = format_record(game, opp_side)
-            tv = get_tv_broadcast(game)
-            astros_sp = get_probable_pitcher(game, side)
+            tv = get_tv_broadcast(game, self.team.id)
+            my_sp = get_probable_pitcher(game, side)
             opp_sp = get_probable_pitcher(game, opp_side)
-            lines[0] = f"Astros {at_symbol} {opp_name}  |  {game_time}"
-            lines[1] = f"HOU ({astros_rec}) vs {opp_name.split()[-1]} ({opp_rec})"
-            lines[2] = f"SP: {astros_sp['name']} vs {opp_sp['name']}"
+            lines[0] = f"{self.team.nickname} {at_symbol} {opp_name}  |  {game_time}"
+            lines[1] = f"{self.team.abbr} ({my_rec}) vs {opp_nick} ({opp_rec})"
+            lines[2] = f"SP: {my_sp['name']} vs {opp_sp['name']}"
             lines[3] = f"TV: {tv}"
             lines[4] = "—"
 
         elif state == "final" and game:
-            side = get_astros_side(game)
+            side = team_side(game, self.team.id)
             opp_side = "home" if side == "away" else "away"
             teams = game.get("teams", {})
-            astros_score = teams.get(side, {}).get("score", 0) or 0
+            my_score = teams.get(side, {}).get("score", 0) or 0
             opp_score = teams.get(opp_side, {}).get("score", 0) or 0
             opp_name = game["teams"][opp_side]["team"]["name"]
+            opp_nick = nickname(game["teams"][opp_side]["team"])
             rec = format_record(game, side)
-            result = "W" if astros_score > opp_score else ("L" if astros_score < opp_score else "T")
-            lines[0] = f"FINAL: Astros {astros_score}, {opp_name.split()[-1]} {opp_score}  ({result})"
+            result = "W" if my_score > opp_score else ("L" if my_score < opp_score else "T")
+            lines[0] = f"FINAL: {self.team.nickname} {my_score}, {opp_nick} {opp_score}  ({result})"
             lines[1] = f"Season: {rec}"
             lines[2] = "—"
             lines[3] = "—"
@@ -566,7 +666,7 @@ class AstrosMenuBarApp(rumps.App):
             )
             lines[0] = "No game today"
             if next_game:
-                nside = get_astros_side(next_game)
+                nside = team_side(next_game, self.team.id)
                 nopp_side = "home" if nside == "away" else "away"
                 nopp_name = next_game["teams"][nopp_side]["team"]["name"]
                 ntime = format_game_time(next_game)
@@ -598,7 +698,7 @@ class AstrosMenuBarApp(rumps.App):
 
         if state == "live" and game and self.live_data:
             ld = self.live_data
-            side = get_astros_side(game)
+            side = team_side(game, self.team.id)
             opp_side = "home" if side == "away" else "away"
             away_abbr = ld.get("away_abbr", "AWY")
             home_abbr = ld.get("home_abbr", "HME")
@@ -612,47 +712,48 @@ class AstrosMenuBarApp(rumps.App):
             runners = ld.get("runners", [])
             pitcher = ld.get("pitcher", "")
             batter = ld.get("batter", "")
-            astros_rec = format_record(game, side)
-            tv = get_tv_broadcast(game)
+            my_rec = format_record(game, side)
+            tv = get_tv_broadcast(game, self.team.id)
             lines[0] = f"{away_abbr} {away_runs} — {home_abbr} {home_runs}"
             lines[1] = f"{half} {inning_ord}  |  {balls}-{strikes}, {outs} out"
             lines[2] = f"Runners: {', '.join(runners) if runners else 'Bases empty'}"
             lines[3] = f"Pitching: {pitcher}  |  Batting: {batter}"
-            lines[4] = f"Record: {astros_rec}"
+            lines[4] = f"Record: {my_rec}"
             lines[5] = f"TV: {tv}"
 
         elif state == "pre" and game:
-            side = get_astros_side(game)
+            side = team_side(game, self.team.id)
             opp_side = "home" if side == "away" else "away"
             opp_name = game["teams"][opp_side]["team"]["name"]
+            opp_nick = nickname(game["teams"][opp_side]["team"])
             game_time = format_game_time(game)
             at_symbol = "@" if side == "away" else "vs"
-            astros_rec = format_record(game, side)
+            my_rec = format_record(game, side)
             opp_rec = format_record(game, opp_side)
-            astros_sp = get_probable_pitcher(game, side)
+            my_sp = get_probable_pitcher(game, side)
             opp_sp = get_probable_pitcher(game, opp_side)
-            tv = get_tv_broadcast(game)
+            tv = get_tv_broadcast(game, self.team.id)
             venue = game.get("venue", {}).get("name", "")
-            lines[0] = f"Astros {at_symbol} {opp_name}  |  {game_time}"
-            lines[1] = f"HOU ({astros_rec}) vs {opp_name.split()[-1]} ({opp_rec})"
-            lines[2] = f"SP — HOU: {astros_sp['name']}  vs  OPP: {opp_sp['name']}"
+            lines[0] = f"{self.team.nickname} {at_symbol} {opp_name}  |  {game_time}"
+            lines[1] = f"{self.team.abbr} ({my_rec}) vs {opp_nick} ({opp_rec})"
+            lines[2] = f"SP — {self.team.abbr}: {my_sp['name']}  vs  OPP: {opp_sp['name']}"
             lines[3] = f"Venue: {venue}"
             lines[4] = f"TV: {tv}"
             lines[5] = "—"
 
         elif state == "final" and game:
-            side = get_astros_side(game)
+            side = team_side(game, self.team.id)
             opp_side = "home" if side == "away" else "away"
             teams = game.get("teams", {})
-            astros_score = teams.get(side, {}).get("score", 0) or 0
+            my_score = teams.get(side, {}).get("score", 0) or 0
             opp_score = teams.get(opp_side, {}).get("score", 0) or 0
             opp_name = game["teams"][opp_side]["team"]["name"]
             rec = format_record(game, side)
-            result = "W" if astros_score > opp_score else ("L" if astros_score < opp_score else "T")
+            result = "W" if my_score > opp_score else ("L" if my_score < opp_score else "T")
             at_symbol = "@" if side == "away" else "vs"
             venue = game.get("venue", {}).get("name", "")
-            lines[0] = f"FINAL: Astros {at_symbol} {opp_name}"
-            lines[1] = f"Score: {astros_score} — {opp_score}  ({result})"
+            lines[0] = f"FINAL: {self.team.nickname} {at_symbol} {opp_name}"
+            lines[1] = f"Score: {my_score} — {opp_score}  ({result})"
             lines[2] = f"Season Record: {rec}"
             lines[3] = f"Venue: {venue}"
             lines[4] = "—"
@@ -666,7 +767,7 @@ class AstrosMenuBarApp(rumps.App):
             )
             lines[0] = "No game today"
             if next_game:
-                nside = get_astros_side(next_game)
+                nside = team_side(next_game, self.team.id)
                 nopp_side = "home" if nside == "away" else "away"
                 nopp_name = next_game["teams"][nopp_side]["team"]["name"]
                 ntime = format_game_time(next_game)
@@ -719,7 +820,7 @@ class AstrosMenuBarApp(rumps.App):
         seen: set = set()
         for play in self.scoring_plays:
             arrow = "▲" if play["top"] else "▼"
-            star = "⭐ " if play["astros"] else ""
+            star = "⭐ " if play["mine"] else ""
             desc = play["description"]
             if len(desc) > 95:
                 desc = desc[:94].rstrip() + "…"
@@ -739,7 +840,7 @@ class AstrosMenuBarApp(rumps.App):
         self.schedule_menu.clear()
 
         for game in upcoming:
-            side = get_astros_side(game)
+            side = team_side(game, self.team.id)
             opp_side = "home" if side == "away" else "away"
             opp_name = game["teams"][opp_side]["team"]["name"]
             date_str = game.get("officialDate", "")
@@ -748,28 +849,28 @@ class AstrosMenuBarApp(rumps.App):
             label = f"{date_str}  {at_sym} {opp_name}  {gtime}"
 
             game_item = rumps.MenuItem(label)
-            sp_astros = get_probable_pitcher(game, side)
+            sp_mine = get_probable_pitcher(game, side)
             sp_opp = get_probable_pitcher(game, opp_side)
-            tv = get_tv_broadcast(game)
+            tv = get_tv_broadcast(game, self.team.id)
             game_item.update([
-                rumps.MenuItem(f"SP: {sp_astros['name']} vs {sp_opp['name']}", callback=AstrosMenuBarApp._noop),
-                rumps.MenuItem(f"TV: {tv}", callback=AstrosMenuBarApp._noop),
+                rumps.MenuItem(f"SP: {sp_mine['name']} vs {sp_opp['name']}", callback=self._noop),
+                rumps.MenuItem(f"TV: {tv}", callback=self._noop),
             ])
             self.schedule_menu.update([game_item])
 
         view_all = rumps.MenuItem("View Full Schedule...", callback=self.open_link)
-        view_all._url = "https://www.mlb.com/astros/schedule"
+        view_all._url = self.team.schedule_url
         self.schedule_menu.update([None, view_all])
 
     def update_lineup_menu(self) -> None:
         """Show batting order 1-9 or a placeholder."""
         self.lineup_menu.clear()
         if not self.lineup_data:
-            self.lineup_menu.update([rumps.MenuItem("Lineup not yet announced", callback=AstrosMenuBarApp._noop)])
+            self.lineup_menu.update([rumps.MenuItem("Lineup not yet announced", callback=self._noop)])
             return
         for i, player in enumerate(self.lineup_data, start=1):
             self.lineup_menu.update([
-                rumps.MenuItem(f"{i}. {player['name']} ({player['position']})", callback=AstrosMenuBarApp._noop)
+                rumps.MenuItem(f"{i}. {player['name']} ({player['position']})", callback=self._noop)
             ])
 
     def update_rotation_menu(self) -> None:
@@ -780,7 +881,7 @@ class AstrosMenuBarApp(rumps.App):
         seen_ids: set = set()
         pitchers: List[Dict[str, Any]] = []
         for game in upcoming:
-            side = get_astros_side(game)
+            side = team_side(game, self.team.id)
             sp = get_probable_pitcher(game, side)
             pid = sp.get("id")
             if pid and pid not in seen_ids:
@@ -793,7 +894,7 @@ class AstrosMenuBarApp(rumps.App):
 
         self.rotation_menu.clear()
         if not pitchers:
-            self.rotation_menu.update([rumps.MenuItem("No rotation data available", callback=AstrosMenuBarApp._noop)])
+            self.rotation_menu.update([rumps.MenuItem("No rotation data available", callback=self._noop)])
             return
 
         for p in pitchers[:6]:
@@ -802,7 +903,7 @@ class AstrosMenuBarApp(rumps.App):
             losses = stats.get("losses", 0)
             era = stats.get("era", "—")
             label = f"{p['name']} — Next: {p['date']} ({wins}-{losses}, {era} ERA)"
-            self.rotation_menu.update([rumps.MenuItem(label, callback=AstrosMenuBarApp._noop)])
+            self.rotation_menu.update([rumps.MenuItem(label, callback=self._noop)])
 
     def update_scores_menu(self) -> None:
         """League-wide scoreboard in three sections: live, completed, upcoming."""
@@ -828,6 +929,7 @@ class AstrosMenuBarApp(rumps.App):
                 upcoming.append(g)
 
         rows: List[Any] = []
+        favorite_ids = self._favorite_ids()
 
         def add_section(header: str, section_games: List[dict]) -> None:
             if not section_games:
@@ -836,7 +938,7 @@ class AstrosMenuBarApp(rumps.App):
                 rows.append(None)
             rows.append(self._item(header))
             for g in section_games:
-                rows.append(self._item(f"   {format_league_game(g)}"))
+                rows.append(self._item(f"   {format_league_game(g, favorite_ids)}"))
 
         add_section("🔴 Live", live)
         add_section("✅ Completed", completed)
@@ -847,7 +949,7 @@ class AstrosMenuBarApp(rumps.App):
         """Full drill-down standings: MLB > League > Division."""
         self.standings_menu.clear()
         if not self.standings_data:
-            self.standings_menu.update([rumps.MenuItem("Standings unavailable", callback=AstrosMenuBarApp._noop)])
+            self.standings_menu.update([rumps.MenuItem("Standings unavailable", callback=self._noop)])
             return
 
         # Build division-id → records lookup
@@ -881,7 +983,7 @@ class AstrosMenuBarApp(rumps.App):
                     gb = tr.get("gamesBack", "—")
                     streak = tr.get("streak", {}).get("streakCode", "—")
                     row = f"{tname}  {wins}-{losses}  {pct}  GB: {gb}  {streak}"
-                    div_item.update([rumps.MenuItem(row, callback=AstrosMenuBarApp._noop)])
+                    div_item.update([rumps.MenuItem(row, callback=self._noop)])
                     # Collect non-division leaders for wild card
                     if tr.get("divisionRank", "1") != "1":
                         wc_teams.append(tr)
@@ -904,7 +1006,7 @@ class AstrosMenuBarApp(rumps.App):
                 wins = rec.get("wins", 0)
                 losses = rec.get("losses", 0)
                 wcgb = tr.get("wildCardGamesBack", "—")
-                wc_item.update([rumps.MenuItem(f"{tname}  {wins}-{losses}  WC GB: {wcgb}", callback=AstrosMenuBarApp._noop)])
+                wc_item.update([rumps.MenuItem(f"{tname}  {wins}-{losses}  WC GB: {wcgb}", callback=self._noop)])
             league_item.update([wc_item])
 
             self.standings_menu.update([league_item])
@@ -912,23 +1014,24 @@ class AstrosMenuBarApp(rumps.App):
     def update_magic_menu(self) -> None:
         """Show magic numbers: division, playoff berth, wild card, #1 seed."""
         self.magic_menu.clear()
-        mn = compute_magic_numbers(self.standings_data)
+        team = self.team
+        mn = compute_magic_numbers(self.standings_data, team.id, team.league_id)
         if not mn:
             self.magic_menu.update([self._item("Standings unavailable")])
             return
 
         rows: List[Any] = [
-            self._item(f"HOU {mn['wins']}-{mn['losses']}  |  {mn['remaining']} games left"),
+            self._item(f"{team.abbr} {mn['wins']}-{mn['losses']}  |  {mn['remaining']} games left"),
             None,
         ]
 
         # Division
         if mn["division_champ"]:
-            rows.append(self._item("🏆 AL West: ✅ CLINCHED"))
+            rows.append(self._item(f"🏆 {team.division}: ✅ CLINCHED"))
         elif mn["division_eliminated"]:
-            rows.append(self._item("🏆 AL West: ✗ Eliminated"))
+            rows.append(self._item(f"🏆 {team.division}: ✗ Eliminated"))
         else:
-            label = f"🏆 Win AL West: {mn['division']}"
+            label = f"🏆 Win {team.division}: {mn['division']}"
             if not mn["division_leader"]:
                 label += f"  ({mn['games_back']} GB)"
             rows.append(self._item(label))
@@ -948,13 +1051,13 @@ class AstrosMenuBarApp(rumps.App):
             rows.append(self._item(f"🃏 Clinch a Wild Card: {mn['wild_card']}"))
 
         # 1 seed
-        seed_label = f"🥇 Clinch #1 AL Seed: {mn['top_seed']}"
+        seed_label = f"🥇 Clinch #1 {team.league_abbr} Seed: {mn['top_seed']}"
         if mn["league_rank"] and mn["league_rank"] != "1":
-            seed_label += f"  (now #{mn['league_rank']} in AL)"
+            seed_label += f"  (now #{mn['league_rank']} in {team.league_abbr})"
         rows.append(self._item(seed_label))
 
         rows.append(None)
-        rows.append(self._item("Magic # = HOU wins + rival losses needed (no tiebreakers)"))
+        rows.append(self._item(f"Magic # = {team.abbr} wins + rival losses needed (no tiebreakers)"))
         self.magic_menu.update(rows)
 
     def _refresh_pitcher_stats(self) -> None:
@@ -964,7 +1067,7 @@ class AstrosMenuBarApp(rumps.App):
         upcoming = [g for g in self.schedule_data if g.get("officialDate", "") >= today]
         pitcher_ids: List[int] = []
         for game in upcoming:
-            sp = get_probable_pitcher(game, get_astros_side(game))
+            sp = get_probable_pitcher(game, team_side(game, self.team.id))
             pid = sp.get("id")
             if pid and pid not in pitcher_ids:
                 pitcher_ids.append(pid)
@@ -974,14 +1077,14 @@ class AstrosMenuBarApp(rumps.App):
                 self.pitcher_stats_cache[pid] = stats
 
     def update_odds_menu(self) -> None:
-        """Show odds for the Astros game."""
+        """Show odds for the team's next game."""
         self.odds_menu.clear()
         api_key = self.config.get("odds_api_key", "")
         if not api_key:
-            self.odds_menu.update([rumps.MenuItem("No API key — add odds_api_key to config", callback=AstrosMenuBarApp._noop)])
+            self.odds_menu.update([rumps.MenuItem("No API key — add odds_api_key to config", callback=self._noop)])
             return
         if not self.odds_data:
-            self.odds_menu.update([rumps.MenuItem("No odds available", callback=AstrosMenuBarApp._noop)])
+            self.odds_menu.update([rumps.MenuItem("No odds available", callback=self._noop)])
             return
         parsed = parse_odds(self.odds_data)
         matchup = parsed.get("matchup", "")
@@ -1008,21 +1111,21 @@ class AstrosMenuBarApp(rumps.App):
             pass
 
         self.odds_menu.update([
-            rumps.MenuItem(f"Game: {matchup}", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"Game: {matchup}", callback=self._noop),
             None,
-            rumps.MenuItem(f"Moneyline — Away: {away_ml}  Home: {home_ml}", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"Moneyline — Away: {away_ml}  Home: {home_ml}", callback=self._noop),
             rumps.MenuItem(
                 f"Run Line — Away: {away_sp.get('point', '—')} ({format_odds_price(away_sp.get('price', 0)) if away_sp else '—'})"
                 f"  Home: {home_sp.get('point', '—')} ({format_odds_price(home_sp.get('price', 0)) if home_sp else '—'})",
-                callback=AstrosMenuBarApp._noop,
+                callback=self._noop,
             ),
             rumps.MenuItem(
                 f"O/U: {over_d.get('point', '—')}  Over {format_odds_price(over_d.get('price', 0)) if over_d else '—'}"
                 f"  Under {format_odds_price(under_d.get('price', 0)) if under_d else '—'}",
-                callback=AstrosMenuBarApp._noop,
+                callback=self._noop,
             ),
             None,
-            rumps.MenuItem(f"First Pitch: {first_pitch}", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"First Pitch: {first_pitch}", callback=self._noop),
         ])
 
     def update_weather_menu(self) -> None:
@@ -1030,7 +1133,7 @@ class AstrosMenuBarApp(rumps.App):
         self.weather_menu.clear()
         w = self.weather_data
         if not w:
-            self.weather_menu.update([rumps.MenuItem("Weather unavailable", callback=AstrosMenuBarApp._noop)])
+            self.weather_menu.update([rumps.MenuItem("Weather unavailable", callback=self._noop)])
             return
         temp_f = w.get("temp_f", 0)
         temp_c = w.get("temp_c", 0)
@@ -1045,25 +1148,25 @@ class AstrosMenuBarApp(rumps.App):
 
         # Name the ballpark the forecast is for
         game = self.game_state.get("game")
-        venue_name = (game or {}).get("venue", {}).get("name", "") or "Daikin Park"
+        venue_name = (game or {}).get("venue", {}).get("name", "") or self.team.venue
 
         self.weather_menu.update([
-            rumps.MenuItem(f"📍 {venue_name}", callback=AstrosMenuBarApp._noop),
-            rumps.MenuItem(f"Temp: {temp_f:.0f}°F / {temp_c:.0f}°C", callback=AstrosMenuBarApp._noop),
-            rumps.MenuItem(f"Condition: {condition}", callback=AstrosMenuBarApp._noop),
-            rumps.MenuItem(f"H/L: {max_f:.0f}°F / {min_f:.0f}°F  ({max_c:.0f}°C / {min_c:.0f}°C)", callback=AstrosMenuBarApp._noop),
-            rumps.MenuItem(f"Wind: {wind_mph:.0f} mph ({wind_kmh:.0f} km/h)", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"📍 {venue_name}", callback=self._noop),
+            rumps.MenuItem(f"Temp: {temp_f:.0f}°F / {temp_c:.0f}°C", callback=self._noop),
+            rumps.MenuItem(f"Condition: {condition}", callback=self._noop),
+            rumps.MenuItem(f"H/L: {max_f:.0f}°F / {min_f:.0f}°F  ({max_c:.0f}°C / {min_c:.0f}°C)", callback=self._noop),
+            rumps.MenuItem(f"Wind: {wind_mph:.0f} mph ({wind_kmh:.0f} km/h)", callback=self._noop),
             None,
-            rumps.MenuItem(f"Updated: {updated}", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"Updated: {updated}", callback=self._noop),
         ])
 
     def update_stats_menu(self) -> None:
-        """Show Astros team stats."""
+        """Show the favorite team's stats."""
         self.stats_menu.clear()
         h = self.team_stats.get("hitting", {})
         p = self.team_stats.get("pitching", {})
         if not h and not p:
-            self.stats_menu.update([rumps.MenuItem("Stats unavailable", callback=AstrosMenuBarApp._noop)])
+            self.stats_menu.update([rumps.MenuItem("Stats unavailable", callback=self._noop)])
             return
 
         record = f"{h.get('wins', '—')}-{h.get('losses', '—')}"
@@ -1074,12 +1177,12 @@ class AstrosMenuBarApp(rumps.App):
         era = p.get("era", "—")
 
         self.stats_menu.update([
-            rumps.MenuItem(f"Record: {record}", callback=AstrosMenuBarApp._noop),
-            rumps.MenuItem(f"Batting Avg: {avg}", callback=AstrosMenuBarApp._noop),
-            rumps.MenuItem(f"Home Runs: {hr}", callback=AstrosMenuBarApp._noop),
-            rumps.MenuItem(f"Runs Scored: {runs}", callback=AstrosMenuBarApp._noop),
-            rumps.MenuItem(f"OPS: {ops}", callback=AstrosMenuBarApp._noop),
-            rumps.MenuItem(f"Team ERA: {era}", callback=AstrosMenuBarApp._noop),
+            rumps.MenuItem(f"Record: {record}", callback=self._noop),
+            rumps.MenuItem(f"Batting Avg: {avg}", callback=self._noop),
+            rumps.MenuItem(f"Home Runs: {hr}", callback=self._noop),
+            rumps.MenuItem(f"Runs Scored: {runs}", callback=self._noop),
+            rumps.MenuItem(f"OPS: {ops}", callback=self._noop),
+            rumps.MenuItem(f"Team ERA: {era}", callback=self._noop),
         ])
 
     # ------------------------------------------------------------------
@@ -1088,6 +1191,7 @@ class AstrosMenuBarApp(rumps.App):
 
     def _update_all_menus(self) -> None:
         """Call all update_* methods."""
+        self._update_team_items()
         self.update_title()
         self.update_top_section()
         self.update_todays_game_menu()
@@ -1110,10 +1214,11 @@ class AstrosMenuBarApp(rumps.App):
         """Full refresh of all data sources (runs on the worker thread)."""
         logging.info("refresh_all called")
         try:
+            self._sync_team()
             today = now_local().strftime("%Y-%m-%d")
             end = (now_local() + dt.timedelta(days=14)).strftime("%Y-%m-%d")
-            self.schedule_data = fetch_schedule(today, end)
-            write_cache("schedule", {"games": self.schedule_data})
+            self.schedule_data = fetch_schedule(today, end, self.team.id)
+            self._write_team_cache("schedule", {"games": self.schedule_data})
 
             self.league_scores = fetch_league_scores()
             write_cache("league_scores", {"games": self.league_scores})
@@ -1136,7 +1241,7 @@ class AstrosMenuBarApp(rumps.App):
                     self.live_data = parse_live_data(feed)
                 game = self.game_state.get("game")
                 if game:
-                    self.scoring_plays = parse_scoring_plays(feed, get_astros_side(game))
+                    self.scoring_plays = parse_scoring_plays(feed, team_side(game, self.team.id))
                     self.line_score = parse_line_score(feed)
                     self._plays_game_pk = game_pk
             elif state != "final":
@@ -1146,29 +1251,29 @@ class AstrosMenuBarApp(rumps.App):
                 # Full refresh loads the lineup silently (no notification) —
                 # a lineup that's already up when the app starts isn't news.
                 boxscore = fetch_boxscore(game_pk)
-                new_lineup = parse_lineup(boxscore, ASTROS_TEAM_ID)
+                new_lineup = parse_lineup(boxscore, self.team.id)
                 if new_lineup:
                     self.lineup_data = new_lineup
                     self._lineup_seen_pk = game_pk
-                    write_cache("lineup", {"lineup": self.lineup_data})
+                    self._write_team_cache("lineup", {"lineup": self.lineup_data})
 
             self.standings_data = fetch_standings()
             write_cache("standings", {"records": self.standings_data})
 
-            self.team_stats = fetch_team_stats()
-            write_cache("team_stats", self.team_stats)
+            self.team_stats = fetch_team_stats(self.team.id)
+            self._write_team_cache("team_stats", self.team_stats)
 
             self._refresh_pitcher_stats()
             self._refresh_odds()
 
             game = self.game_state.get("game")
             if game:
-                astros_side = get_astros_side(game)
-                venue_team = ASTROS_TEAM_ID if astros_side == "home" else opponent_team_id(game)
+                my_side = team_side(game, self.team.id)
+                venue_team = self.team.id if my_side == "home" else opponent_team_id(game, self.team.id)
             else:
-                venue_team = ASTROS_TEAM_ID
+                venue_team = self.team.id
             self.weather_data = fetch_weather(venue_team)
-            write_cache("weather", self.weather_data)
+            self._write_team_cache("weather", self.weather_data)
 
         except Exception as exc:
             logging.exception("refresh_all error: %s", exc)
@@ -1188,23 +1293,23 @@ class AstrosMenuBarApp(rumps.App):
                 return
         except (TypeError, ValueError):
             pass  # no/invalid timestamp — fetch
-        self.odds_data = fetch_odds(api_key)
+        self.odds_data = fetch_odds(api_key, self.team)
         self._odds_fetched = now_local().isoformat()
-        write_cache("odds", {"event": self.odds_data, "fetched": self._odds_fetched})
+        self._write_team_cache("odds", {"event": self.odds_data, "fetched": self._odds_fetched})
 
     def _check_lineup(self, game_pk: int) -> None:
         """Fetch the lineup; notify the first time it appears for this game."""
         boxscore = fetch_boxscore(game_pk)
-        new_lineup = parse_lineup(boxscore, ASTROS_TEAM_ID)
+        new_lineup = parse_lineup(boxscore, self.team.id)
         if not new_lineup:
             return
         self.lineup_data = new_lineup
-        write_cache("lineup", {"lineup": self.lineup_data})
+        self._write_team_cache("lineup", {"lineup": self.lineup_data})
         if self._lineup_seen_pk != game_pk:
             self._lineup_seen_pk = game_pk
             notifs = self.config.get("notifications", {})
             if notifs.get("lineup_posted", False):
-                self.send_notification("Lineup Posted", "Astros lineup has been announced!")
+                self.send_notification("Lineup Posted", f"{self.team.nickname} lineup has been announced!")
 
     def _set_interval(self, seconds: int) -> None:
         """Adjust the primary timer interval (safe to call from the worker)."""
@@ -1235,10 +1340,10 @@ class AstrosMenuBarApp(rumps.App):
         try:
             today = now_local().strftime("%Y-%m-%d")
             end = (now_local() + dt.timedelta(days=14)).strftime("%Y-%m-%d")
-            new_schedule = fetch_schedule(today, end)
+            new_schedule = fetch_schedule(today, end, self.team.id)
             if new_schedule:
                 self.schedule_data = new_schedule
-                write_cache("schedule", {"games": self.schedule_data})
+                self._write_team_cache("schedule", {"games": self.schedule_data})
 
             new_scores = fetch_league_scores()
             if new_scores:
@@ -1260,23 +1365,23 @@ class AstrosMenuBarApp(rumps.App):
                 logging.info("Game going live")
                 notifs = self.config.get("notifications", {})
                 if notifs.get("game_starting", True):
-                    self.send_notification("Game Starting", "The Astros game is underway!")
+                    self.send_notification("Game Starting", f"The {self.team.nickname} game is underway!")
 
             # State transition: live ending → final
             if old_state == "live" and new_state == "final":
                 logging.info("Game ended — final")
                 notifs = self.config.get("notifications", {})
                 if notifs.get("final_score", True) and game:
-                    side = get_astros_side(game)
+                    side = team_side(game, self.team.id)
                     opp_side = "home" if side == "away" else "away"
                     teams = game.get("teams", {})
-                    astros_score = teams.get(side, {}).get("score", 0) or 0
+                    my_score = teams.get(side, {}).get("score", 0) or 0
                     opp_score = teams.get(opp_side, {}).get("score", 0) or 0
-                    opp_name = game["teams"][opp_side]["team"]["name"]
-                    result = "W" if astros_score > opp_score else "L"
+                    opp_nick = nickname(game["teams"][opp_side]["team"])
+                    result = "W" if my_score > opp_score else "L"
                     self.send_notification(
                         "Final Score",
-                        f"Astros {astros_score}, {opp_name.split()[-1]} {opp_score} — {result}"
+                        f"{self.team.nickname} {my_score}, {opp_nick} {opp_score} — {result}"
                     )
 
             # Final-score icon: hold color 30 min, then revert
@@ -1318,7 +1423,7 @@ class AstrosMenuBarApp(rumps.App):
                     self._starting_soon_pk = game_pk
                     self.send_notification(
                         "Game Starting Soon",
-                        f"Astros game starts in ~{int(minutes_until)} min!"
+                        f"{self.team.nickname} game starts in ~{int(minutes_until)} min!"
                     )
                 # Lineups usually post a few hours before first pitch —
                 # start checking within 4 hours of game time.
@@ -1328,7 +1433,7 @@ class AstrosMenuBarApp(rumps.App):
             # Final: grab the completed game's scoring plays once
             if new_state == "final" and game_pk and game and self._plays_game_pk != game_pk:
                 feed = fetch_live_game(game_pk)
-                self.scoring_plays = parse_scoring_plays(feed, get_astros_side(game))
+                self.scoring_plays = parse_scoring_plays(feed, team_side(game, self.team.id))
                 self.line_score = parse_line_score(feed)
                 self._plays_game_pk = game_pk
             if new_state in ("off", "pre"):
@@ -1340,34 +1445,34 @@ class AstrosMenuBarApp(rumps.App):
                 # New game (or game 2 of a doubleheader): reset score tracking
                 if game_pk != self._score_watch_pk:
                     self._score_watch_pk = game_pk
-                    self.previous_astros_score = None
+                    self.previous_my_score = None
                 feed = fetch_live_game(game_pk)
                 self.live_data = parse_live_data(feed)
                 if game:
-                    self.scoring_plays = parse_scoring_plays(feed, get_astros_side(game))
+                    self.scoring_plays = parse_scoring_plays(feed, team_side(game, self.team.id))
                     self.line_score = parse_line_score(feed)
                     self._plays_game_pk = game_pk
 
                 # Scoring plays notification
                 if game:
-                    side = get_astros_side(game)
+                    side = team_side(game, self.team.id)
                     opp_side = "home" if side == "away" else "away"
-                    current_astros_runs = self.live_data.get(f"{side}_runs", 0) or 0
+                    current_my_runs = self.live_data.get(f"{side}_runs", 0) or 0
                     notifs = self.config.get("notifications", {})
                     if (
-                        self.previous_astros_score is not None
-                        and current_astros_runs > self.previous_astros_score
+                        self.previous_my_score is not None
+                        and current_my_runs > self.previous_my_score
                         and notifs.get("scoring_plays", False)
                     ):
                         opp_runs = self.live_data.get(f"{opp_side}_runs", 0) or 0
                         away_abbr = self.live_data.get("away_abbr", "AWY")
                         home_abbr = self.live_data.get("home_abbr", "HME")
                         self.send_notification(
-                            "Astros Score!",
+                            f"{self.team.nickname} Score!",
                             f"{away_abbr} {self.live_data.get('away_runs', 0)} — "
                             f"{home_abbr} {self.live_data.get('home_runs', 0)}"
                         )
-                    self.previous_astros_score = current_astros_runs
+                    self.previous_my_score = current_my_runs
 
                 # Update lineup (also catches in-game substitutions)
                 self._check_lineup(game_pk)
@@ -1387,20 +1492,20 @@ class AstrosMenuBarApp(rumps.App):
             self.standings_data = fetch_standings()
             write_cache("standings", {"records": self.standings_data})
 
-            self.team_stats = fetch_team_stats()
-            write_cache("team_stats", self.team_stats)
+            self.team_stats = fetch_team_stats(self.team.id)
+            self._write_team_cache("team_stats", self.team_stats)
 
             self._refresh_pitcher_stats()
             self._refresh_odds()
 
             game = self.game_state.get("game")
             if game:
-                astros_side = get_astros_side(game)
-                venue_team = ASTROS_TEAM_ID if astros_side == "home" else opponent_team_id(game)
+                my_side = team_side(game, self.team.id)
+                venue_team = self.team.id if my_side == "home" else opponent_team_id(game, self.team.id)
             else:
-                venue_team = ASTROS_TEAM_ID
+                venue_team = self.team.id
             self.weather_data = fetch_weather(venue_team)
-            write_cache("weather", self.weather_data)
+            self._write_team_cache("weather", self.weather_data)
 
         except Exception as exc:
             logging.exception("refresh_slow error: %s", exc)

@@ -1,132 +1,160 @@
-"""Witty, situation-aware game text for the clipboard."""
+"""Witty, situation-aware game text for the clipboard.
+
+Messages are templates filled in with the favorite team's nickname
+(`{team}`), the opponent (`{opp}`), scores, and so on. Teams can add their
+own flavor lines in TEAM_FLAVOR, which join the generic pool.
+"""
 
 from __future__ import annotations
 
 import datetime as dt
 import random
+from typing import Dict, List
 
-from .mlb import format_game_time, get_astros_side, get_probable_pitcher
+from .mlb import (
+    format_game_time,
+    get_probable_pitcher,
+    nickname,
+    other_side,
+    team_side,
+)
+from .teams import Team
+
+GENERIC: Dict[str, List[str]] = {
+    "off": [
+        "No {team} today. What am I supposed to do with my evening?",
+        "No game today. The {team} are resting. I am not.",
+        "Day off for the boys. My blood pressure thanks them.",
+    ],
+    "pre": [
+        "{team} vs {opp} at {time}. {sp} on the bump. Let's ride. 🤘",
+        "{sp} dealing tonight against the {opp}. First pitch {time}. LFG!",
+        "Game day! {opp} have no idea what's coming. {time}. ⚾",
+        "Tonight: {team}. {opp}. {time}. {sp} vs the world.",
+    ],
+    "tie_final": [
+        "Final: {team} {us}, {opp} {them}. A tie?? In baseball?? What year is it.",
+    ],
+    "win": [
+        "W. {us}-{them} over the {opp}. Good guys win again.",
+        "{team} take it {us}-{them}! {opp} in shambles. 😤",
+        "Another one. {team} {us}, {opp} {them}. This team is different. 🔥",
+    ],
+    "loss": [
+        "{team} {us}, {opp} {them}. We don't talk about this one.",
+        "L. {us}-{them} to the {opp}. Delete this from the record books.",
+        "Final: {us}-{them}. The {opp} got lucky. That's my story.",
+        "{team} fall {us}-{them}. Tomorrow we choose violence. 😤",
+        "Not our night. {us}-{them}. But 162 games is a marathon not a sprint.",
+    ],
+    "loading": [
+        "{team} vs {opp} — game is live but I'm still loading. Hold tight.",
+    ],
+    "blowout": [
+        "{team} {us}, {opp} {them} in the {half} {inning}. This is a clinic. 🏥",
+        "{us}-{them} {team}. {opp} need to call their therapist.",
+        "{team} up {us}-{them}. I almost feel bad. Almost. 😏",
+        "It's {us}-{them} in the {inning}. {opp} already booking flights home.",
+    ],
+    "leading": [
+        "{team} {us}, {opp} {them}. {half} {inning}. We're cooking. 🔥",
+        "{team} up {us}-{them} in the {inning}. Keep it rolling boys!",
+        "{us}-{them} {team}, {half} {inning}. {batter} at the plate. Let's add on.",
+        "Leading {us}-{them} in the {inning}. Vibes are immaculate. ✨",
+    ],
+    "tied": [
+        "Tied {us}-{them} in the {half} {inning}. Someone needs to be a hero.",
+        "All knotted up {us}-{them}, {half} {inning}. Clench time. 😬",
+        "{us}-{them} tie game in the {inning}. This is why we watch baseball.",
+        "Tied at {us} in the {inning}. {batter} up. DO SOMETHING.",
+    ],
+    "close_trail": [
+        "{team} down {us}-{them} in the {half} {inning}. Not worried. Yet. 😅",
+        "{them}-{us} {opp}, {half} {inning}. Plenty of game left. Come on {team}!",
+        "Trailing {us}-{them} in the {inning}. This team knows how to come back. 💪",
+        "Down {deficit} in the {inning}. {batter} at the plate. Rally caps on! 🧢",
+    ],
+    "down_bad": [
+        "{team} {us}, {opp} {them} in the {inning}. This is fine. Everything is fine. 🔥🐶🔥",
+        "Down {us}-{them}. I'm not panicking, you're panicking.",
+        "{them}-{us} {opp} in the {inning}. Fade me. 💀",
+        "It's {us}-{them} and I'm choosing to believe in miracles.",
+    ],
+}
+
+TEAM_FLAVOR: Dict[str, Dict[str, List[str]]] = {
+    "mlb/HOU": {
+        "off": ["Off day. Guess I'll just stare at my Altuve jersey."],
+        "pre": ["It's {sp} day. Stros vs {opp} at {time}. Shoot it! 🚀"],
+        "win": [
+            "Astros {us}, {opp} {them}. SHOOT IT HOUSTON TEXAS! 🚀🤘",
+            "FINAL: Astros {us}, {opp} {them}. Go ahead and play the train horn. 🚂",
+        ],
+        "blowout": ["{us}-{them} Stros. {opp} need to call their therapist."],
+        "leading": ["Stros up {us}-{them} in the {inning}. Keep it rolling boys!"],
+        "close_trail": ["{them}-{us} {opp}, {half} {inning}. Plenty of game left. Come on Stros!"],
+    },
+}
 
 
-def generate_game_text(game_state: dict, live_data: dict, schedule_data: list) -> str:
-    """Generate a witty, situational text message about the current Astros game."""
+def _pick(situation: str, team: Team, **fields) -> str:
+    pool = GENERIC[situation] + TEAM_FLAVOR.get(team.key, {}).get(situation, [])
+    return random.choice(pool).format(team=team.nickname, **fields)
+
+
+def generate_game_text(
+    game_state: dict, live_data: dict, schedule_data: list, team: Team
+) -> str:
+    """Generate a witty, situational text message about the team's game."""
     state = game_state.get("state", "off")
     game = game_state.get("game")
 
     if state == "off" or not game:
-        # Off day
         today = dt.datetime.now().strftime("%Y-%m-%d")
         next_game = next(
             (g for g in schedule_data if g.get("officialDate", "") > today), None
         )
-        off_day_msgs = [
-            "No Astros today. What am I supposed to do with my evening?",
-            "Off day. Guess I'll just stare at my Altuve jersey.",
-            "No game today. The Astros are resting. I am not.",
-            "Day off for the boys. My blood pressure thanks them.",
-        ]
-        msg = random.choice(off_day_msgs)
+        msg = _pick("off", team)
         if next_game:
-            opp_side = "home" if get_astros_side(next_game) == "away" else "away"
+            opp_side = other_side(team_side(next_game, team.id))
             opp = next_game["teams"][opp_side]["team"]["name"]
             msg += f" Next up: {opp}."
         return msg
 
-    side = get_astros_side(game)
-    opp_side = "home" if side == "away" else "away"
-    opp_name = game["teams"][opp_side]["team"]["name"].split()[-1]
+    side = team_side(game, team.id)
+    opp_side = other_side(side)
+    opp = nickname(game["teams"][opp_side]["team"])
 
     if state == "pre":
-        time_str = format_game_time(game)
-        sp = get_probable_pitcher(game, side)
-        pre_msgs = [
-            f"Stros vs {opp_name} at {time_str}. {sp['name']} on the bump. Let's ride. 🤘",
-            f"{sp['name']} dealing tonight against the {opp_name}. First pitch {time_str}. LFG!",
-            f"Game day! {opp_name} have no idea what's coming. {time_str} CT. ⚾",
-            f"It's {sp['name']} day. Stros vs {opp_name} at {time_str}. Shoot it! 🚀",
-            f"Tonight: Astros. {opp_name}. {time_str}. {sp['name']} vs the world.",
-        ]
-        return random.choice(pre_msgs)
+        sp = get_probable_pitcher(game, side)["name"]
+        return _pick("pre", team, opp=opp, time=format_game_time(game), sp=sp)
 
     if state == "final":
-        a_score = game["teams"][side].get("score", 0) or 0
-        o_score = game["teams"][opp_side].get("score", 0) or 0
-        if a_score == o_score:
-            return f"Final: Astros {a_score}, {opp_name} {o_score}. A tie?? In baseball?? What year is it."
-        if a_score > o_score:
-            win_msgs = [
-                f"Astros {a_score}, {opp_name} {o_score}. SHOOT IT HOUSTON TEXAS! 🚀🤘",
-                f"W. {a_score}-{o_score} over the {opp_name}. Good guys win again.",
-                f"Stros take it {a_score}-{o_score}! {opp_name} in shambles. 😤",
-                f"FINAL: Astros {a_score}, {opp_name} {o_score}. Go ahead and play the train horn. 🚂",
-                f"Another one. Astros {a_score}, {opp_name} {o_score}. This team is different. 🔥",
-            ]
-            return random.choice(win_msgs)
-        else:
-            loss_msgs = [
-                f"Astros {a_score}, {opp_name} {o_score}. We don't talk about this one.",
-                f"L. {a_score}-{o_score} to the {opp_name}. Delete this from the record books.",
-                f"Final: {a_score}-{o_score}. The {opp_name} got lucky. That's my story.",
-                f"Stros fall {a_score}-{o_score}. Tomorrow we choose violence. 😤",
-                f"Not our night. {a_score}-{o_score}. But 162 games is a marathon not a sprint.",
-            ]
-            return random.choice(loss_msgs)
+        us = game["teams"][side].get("score", 0) or 0
+        them = game["teams"][opp_side].get("score", 0) or 0
+        situation = "tie_final" if us == them else ("win" if us > them else "loss")
+        return _pick(situation, team, opp=opp, us=us, them=them)
 
     # Live game
     if not live_data:
-        return f"Stros vs {opp_name} — game is live but I'm still loading. Hold tight."
+        return _pick("loading", team, opp=opp)
 
-    astros_runs = live_data.get(f"{side}_runs", 0)
-    opp_runs = live_data.get(f"{opp_side}_runs", 0)
-    inning = live_data.get("inning_ordinal", "")
-    half = live_data.get("half", "")
-    pitcher = live_data.get("pitcher", "someone")
-    batter = live_data.get("batter", "someone")
-    runners = live_data.get("runners", [])
-    outs = live_data.get("outs", 0)
-    diff = astros_runs - opp_runs
-
+    us = live_data.get(f"{side}_runs", 0)
+    them = live_data.get(f"{opp_side}_runs", 0)
+    diff = us - them
     if diff > 4:
-        blowout_msgs = [
-            f"Astros {astros_runs}, {opp_name} {opp_runs} in the {half} {inning}. This is a clinic. 🏥",
-            f"{astros_runs}-{opp_runs} Stros. {opp_name} need to call their therapist.",
-            f"Astros up {astros_runs}-{opp_runs}. I almost feel bad. Almost. 😏",
-            f"It's {astros_runs}-{opp_runs} in the {inning}. {opp_name} already booking flights home.",
-        ]
-        return random.choice(blowout_msgs)
-
-    if diff > 0:
-        leading_msgs = [
-            f"Astros {astros_runs}, {opp_name} {opp_runs}. {half} {inning}. We're cooking. 🔥",
-            f"Stros up {astros_runs}-{opp_runs} in the {inning}. Keep it rolling boys!",
-            f"{astros_runs}-{opp_runs} Astros, {half} {inning}. {batter} at the plate. Let's add on.",
-            f"Leading {astros_runs}-{opp_runs} in the {inning}. Vibes are immaculate. ✨",
-        ]
-        return random.choice(leading_msgs)
-
-    if diff == 0:
-        tied_msgs = [
-            f"Tied {astros_runs}-{opp_runs} in the {half} {inning}. Someone needs to be a hero.",
-            f"All knotted up {astros_runs}-{opp_runs}, {half} {inning}. Clench time. 😬",
-            f"{astros_runs}-{opp_runs} tie game in the {inning}. This is why we watch baseball.",
-            f"Tied at {astros_runs} in the {inning}. {batter} up. DO SOMETHING.",
-        ]
-        return random.choice(tied_msgs)
-
-    if diff >= -2:
-        close_trail_msgs = [
-            f"Astros down {astros_runs}-{opp_runs} in the {half} {inning}. Not worried. Yet. 😅",
-            f"{opp_runs}-{astros_runs} {opp_name}, {half} {inning}. Plenty of game left. Come on Stros!",
-            f"Trailing {astros_runs}-{opp_runs} in the {inning}. This team knows how to come back. 💪",
-            f"Down {opp_runs - astros_runs} in the {inning}. {batter} at the plate. Rally caps on! 🧢",
-        ]
-        return random.choice(close_trail_msgs)
-
-    # Down big
-    down_bad_msgs = [
-        f"Astros {astros_runs}, {opp_name} {opp_runs} in the {inning}. This is fine. Everything is fine. 🔥🐶🔥",
-        f"Down {astros_runs}-{opp_runs}. I'm not panicking, you're panicking.",
-        f"{opp_runs}-{astros_runs} {opp_name} in the {inning}. Fade me. 💀",
-        f"It's {astros_runs}-{opp_runs} and I'm choosing to believe in miracles.",
-    ]
-    return random.choice(down_bad_msgs)
+        situation = "blowout"
+    elif diff > 0:
+        situation = "leading"
+    elif diff == 0:
+        situation = "tied"
+    elif diff >= -2:
+        situation = "close_trail"
+    else:
+        situation = "down_bad"
+    return _pick(
+        situation, team, opp=opp, us=us, them=them, deficit=them - us,
+        inning=live_data.get("inning_ordinal", ""),
+        half=live_data.get("half", ""),
+        batter=live_data.get("batter", "someone"),
+    )

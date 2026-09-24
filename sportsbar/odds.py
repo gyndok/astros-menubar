@@ -6,12 +6,20 @@ import logging
 
 import requests
 
+from .teams import Team
+
 
 ODDS_API_BASE = "https://api.the-odds-api.com/v4/sports/baseball_mlb"
 
 
-def fetch_odds(api_key: str) -> dict:
-    """Fetch Astros game odds from The Odds API."""
+def is_team(odds_name: str, team: Team) -> bool:
+    """Does an Odds API team name ("Houston Astros") refer to `team`?"""
+    names = (team.name, team.nickname) + tuple(a for a in team.aliases if not a.isupper())
+    return any(odds_name == n or odds_name.endswith(" " + n) for n in names)
+
+
+def fetch_odds(api_key: str, team: Team) -> dict:
+    """Fetch odds for the team's next game from The Odds API."""
     if not api_key:
         return {}
     try:
@@ -24,7 +32,7 @@ def fetch_odds(api_key: str) -> dict:
         resp.raise_for_status()
         events = resp.json()
         for event in events:
-            if "Houston Astros" in (event.get("home_team", ""), event.get("away_team", "")):
+            if is_team(event.get("home_team", ""), team) or is_team(event.get("away_team", ""), team):
                 return event
         return {}
     except Exception as exc:

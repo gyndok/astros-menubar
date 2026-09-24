@@ -7,8 +7,11 @@ import datetime as dt
 import json
 import logging
 from pathlib import Path
+from typing import List
 
 import yaml
+
+from .teams import DEFAULT_FAVORITES, Team
 
 
 APP_NAME = "Astros Menu Bar"
@@ -19,8 +22,16 @@ CONFIG_PATH = CONFIG_DIR / "config.yaml"
 CACHE_DIR = CONFIG_DIR / "cache"
 LOG_PATH = CONFIG_DIR / "app.log"
 
+USER_GUIDE_LINK = {
+    "name": "User's Guide",
+    "url": f"https://github.com/{GITHUB_REPO}/blob/main/docs/USER_GUIDE.md",
+}
+
 DEFAULT_CONFIG = {
     "odds_api_key": "",
+    # Teams to follow, in priority order. The first MLB team is the one the
+    # app tracks; any others are starred on the MLB scoreboard.
+    "favorites": copy.deepcopy(DEFAULT_FAVORITES),
     "notifications": {
         "game_starting": True,
         "final_score": True,
@@ -29,15 +40,31 @@ DEFAULT_CONFIG = {
     },
     "show_odds": True,
     "show_weather": True,
-    "quick_links": [
-        {"name": "User's Guide", "url": f"https://github.com/{GITHUB_REPO}/blob/main/docs/USER_GUIDE.md"},
-        {"name": "Astros.com", "url": "https://www.mlb.com/astros"},
-        {"name": "MLB.tv", "url": "https://www.mlb.com/tv"},
+    # "auto" = links for your team; or a list of {name, url} entries.
+    "quick_links": "auto",
+}
+
+# Extra default links for a team beyond its mlb.com page.
+TEAM_LINKS = {
+    "mlb/HOU": [
         {"name": "Space City Home Network", "url": "https://www.spacecityhomenetwork.com"},
         {"name": "r/Astros", "url": "https://www.reddit.com/r/Astros/"},
         {"name": "Astros on X", "url": "https://x.com/astros"},
     ],
 }
+
+
+def quick_links(config: dict, team: Team) -> List[dict]:
+    """The Quick Links menu: the user's own list, or defaults for `team`."""
+    links = config.get("quick_links")
+    if isinstance(links, list):
+        return [link for link in links if isinstance(link, dict) and "url" in link]
+    return [
+        dict(USER_GUIDE_LINK),
+        {"name": f"{team.nickname} on MLB.com", "url": team.site_url},
+        {"name": "MLB.tv", "url": "https://www.mlb.com/tv"},
+        *copy.deepcopy(TEAM_LINKS.get(team.key, [])),
+    ]
 
 
 def ensure_paths() -> None:
@@ -59,17 +86,26 @@ def load_config() -> dict:
     merged.update(loaded)
     if not isinstance(merged.get("notifications"), dict):
         merged["notifications"] = copy.deepcopy(DEFAULT_CONFIG["notifications"])
+    if not isinstance(merged.get("favorites"), list):
+        merged["favorites"] = copy.deepcopy(DEFAULT_CONFIG["favorites"])
     if not isinstance(merged.get("quick_links"), list):
-        merged["quick_links"] = copy.deepcopy(DEFAULT_CONFIG["quick_links"])
-    # Configs saved before the User's Guide existed won't have its link —
-    # make sure it's always present at the top.
-    guide = dict(DEFAULT_CONFIG["quick_links"][0])
-    if not any(
-        isinstance(link, dict) and link.get("url") == guide["url"]
-        for link in merged["quick_links"]
-    ):
-        merged["quick_links"].insert(0, guide)
+        merged["quick_links"] = "auto"
+    else:
+        # Configs saved before the User's Guide existed won't have its
+        # link — make sure it's always present at the top.
+        guide = dict(USER_GUIDE_LINK)
+        if not any(
+            isinstance(link, dict) and link.get("url") == guide["url"]
+            for link in merged["quick_links"]
+        ):
+            merged["quick_links"].insert(0, guide)
     return merged
+
+
+def save_config(config: dict) -> None:
+    ensure_paths()
+    with CONFIG_PATH.open("w", encoding="utf-8") as f:
+        yaml.safe_dump(config, f, sort_keys=False)
 
 
 def setup_logging() -> None:
