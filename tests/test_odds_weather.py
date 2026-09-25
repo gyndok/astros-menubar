@@ -15,6 +15,7 @@ def test_fetch_odds_finds_astros_game(fake_api):
     event = odds.fetch_odds("secret-key", HOU)
     assert event["id"] == "def"
     assert "apiKey=secret-key" in fake_api.calls[0][0]
+    assert "bookmakers=williamhill_us" in fake_api.calls[0][0]  # Caesars
 
 
 def test_fetch_odds_finds_other_teams(fake_api):

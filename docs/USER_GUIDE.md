@@ -182,7 +182,7 @@ Standings, odds, and weather aren't available for these leagues yet.
 
 ## 💰 Vegas Odds
 
-Moneyline, run line, and over/under for the Astros game (DraftKings lines).
+Moneyline, run line, and over/under for the Astros game (Caesars Sportsbook lines).
 This is the one feature that needs setup:
 
 1. Get a **free** API key at [the-odds-api.com](https://the-odds-api.com)
