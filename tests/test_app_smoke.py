@@ -314,6 +314,22 @@ def test_check_updates_runs_in_background(harness, monkeypatch):
     assert harness.api.calls[-1][1] == "sportsbar-worker"
     assert harness.notifications[-1][0] == "Update Available"
     assert opened == ["https://example.com/release"]
+    assert app.check_updates_item.title == "⬆️ Update Available: 99.0.0"
+
+
+def test_check_updates_shows_result_on_menu_item(harness):
+    from sportsbar.config import APP_VERSION
+    harness.api.overrides["api.github.com"] = {"tag_name": f"v{APP_VERSION}"}
+    app = harness.make_app()
+    app.check_updates(None)
+    assert app.check_updates_item.title == "Checking for Updates…"
+    harness.loop.pump(app)
+    assert app.check_updates_item.title == f"✅ Up to Date ({APP_VERSION})"
+
+    harness.api.fail = True
+    app.check_updates(None)
+    harness.loop.pump(app)
+    assert app.check_updates_item.title == "⚠️ Couldn't Reach GitHub — Try Again"
 
 
 def test_menus_are_labelled_for_the_favorite_team(harness):

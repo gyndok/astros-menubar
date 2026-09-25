@@ -294,12 +294,12 @@ class MenuBarApp(rumps.App):
         self.no_mlb_item = rumps.MenuItem("None — don't follow MLB", callback=self.unfollow_mlb)
         self.team_menu.update([None, self.no_mlb_item])
 
-        check_updates_item = rumps.MenuItem("Check for Updates…", callback=self.check_updates)
+        self.check_updates_item = rumps.MenuItem("Check for Updates…", callback=self.check_updates)
         edit_config_item = rumps.MenuItem("Edit Config", callback=self.edit_config)
         quit_item = rumps.MenuItem("Quit", callback=self.quit_app)
 
         self.settings_menu.update([
-            self.team_menu, notif_menu, check_updates_item, edit_config_item, quit_item,
+            self.team_menu, notif_menu, self.check_updates_item, edit_config_item, quit_item,
         ])
         self._update_team_items()
 
@@ -454,7 +454,18 @@ class MenuBarApp(rumps.App):
 
     def check_updates(self, _sender: Any) -> None:
         """Menu callback: check GitHub for a newer release in the background."""
-        self.worker.submit("check_updates", self._check_updates_work)
+        self.check_updates_item.title = "Checking for Updates…"
+        self._update_check_result = ""
+        self.worker.submit("check_updates", self._check_updates_work, self._show_update_result)
+
+    def _show_update_result(self) -> None:
+        """Show the check's outcome on the menu item itself.
+
+        Notifications alone aren't enough: macOS often drops rumps'
+        (NSUserNotification) notifications, leaving the click with no
+        visible result.
+        """
+        self.check_updates_item.title = self._update_check_result or "Check for Updates…"
 
     def _check_updates_work(self) -> None:
         """Compare APP_VERSION with the latest GitHub release.
@@ -477,6 +488,7 @@ class MenuBarApp(rumps.App):
             )
         except Exception as exc:
             logging.exception("check_updates failed: %s", exc)
+            self._update_check_result = "⚠️ Couldn't Reach GitHub — Try Again"
             self.send_notification(
                 "Check for Updates", "Couldn't reach GitHub — try again later."
             )
@@ -489,12 +501,14 @@ class MenuBarApp(rumps.App):
                 return (0,)
 
         if latest and as_tuple(latest) > as_tuple(APP_VERSION):
+            self._update_check_result = f"⬆️ Update Available: {latest}"
             self.send_notification(
                 "Update Available",
                 f"Version {latest} is out (you have {APP_VERSION}) — opening the download page…",
             )
             webbrowser.open(url)
         else:
+            self._update_check_result = f"✅ Up to Date ({APP_VERSION})"
             self.send_notification(
                 "Up to Date", f"You're on the latest version ({APP_VERSION}). ⚾"
             )
