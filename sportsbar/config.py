@@ -15,7 +15,7 @@ from .teams import DEFAULT_FAVORITES, Team
 
 
 APP_NAME = "Astros Menu Bar"
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.0.1"
 GITHUB_REPO = "gyndok/astros-menubar"
 CONFIG_DIR = Path.home() / ".config" / "astros-menubar"
 CONFIG_PATH = CONFIG_DIR / "config.yaml"
